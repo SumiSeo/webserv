@@ -1,19 +1,25 @@
-#ifndef Server_HPP
-# define Server_HPP
+#ifndef __SERVER_HPP__
+# define __SERVER_HPP__
 
-# include "iostream"
+# include <string>
+# include <vector>
 
 class Server
 {
-  private:
-	/* data */
+  public:
+	Server();
+	Server(const Server &src);
+	Server(const char fileName[]);
+	~Server();
+
+	Server &operator=(const Server &original);
   protected:
 	/* data */
-  public:
-	Server(void);
-	Server(const Server &original);
-	Server &operator=(const Server &original);
-	~Server();
+  private:
+	typedef std::vector<std::string>	t_vecString;
+
+	t_vecString	readFile(const char fileName[]);
+	void		parseTokens(const t_vecString &tokens);
 };
 
 #endif
