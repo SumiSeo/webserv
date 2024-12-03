@@ -15,12 +15,14 @@ BEGIN	:=	\e[1A\e[K
 DEFAULT	:=	\e(B\e[m
 
 FILES	:=	main.cpp \
+			server/Server.cpp
 			
 
 SRC_DIR	:=	src
 OBJ_DIR	:=	obj
 SRC		:=	$(addprefix $(SRC_DIR)/, $(FILES))
 OBJ		:=	$(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC))
+
 DEP		:=	$(OBJ:.o=.d)
 
 CXX			:=	c++
