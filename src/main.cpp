@@ -6,11 +6,14 @@
 /*   By: sumseo <sumseo@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/11/07 16:00:23 by pnguyen-          #+#    #+#             */
-/*   Updated: 2024/12/03 12:23:01 by sumseo           ###   ########.fr       */
+/*   Updated: 2024/12/03 16:09:11 by pnguyen-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <exception>
 #include <iostream>
+
+#include "Server.hpp"
 
 using std::cerr;
 using std::cout;
@@ -23,6 +26,14 @@ int	main(int argc, char **argv)
 		cerr << "Usage: " << argv[0] << " <configuration file>" << endl;
 		return (1);
 	}
-	cout << "Initial Release" << endl;
+	try
+	{
+		Server	server(argv[1]);
+	}
+	catch (const std::exception &e)
+	{
+		cerr << "Error: " << e.what() << endl;
+		return (1);
+	}
 	return (0);
 }
