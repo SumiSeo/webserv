@@ -39,7 +39,7 @@ Server	&Server::operator=(const Server &rhs)
 
 Server::t_vecString	Server::readFile(const char filename[])
 {
-	t_vecString		listTokens;
+  t_vecString		listTokens;
 	ifstream		infile(filename);
 
 	infile.exceptions(ifstream::badbit);
@@ -82,3 +82,4 @@ t_vecString	Utils::split(const string &str, char delim)
 	if (pos < str.size()) words.push_back(str.substr(pos));
 	return words;
 }
+
