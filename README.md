@@ -6,8 +6,8 @@ So think simple. What does web do ? User inputs, server saves. User requests, se
 
 ### SERVER SET-UP
 
-### CLIENT SET-UP
-
 ### DATA EXCHANGE(CLIENT-SERVER CONNECTION)
 
 ### CLOSE CONNECTION
+
+### CLIENT PAGES

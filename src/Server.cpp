@@ -1,13 +1,4 @@
 #include "Server.hpp"
-#include <fstream>
-#include <sstream>
-
-using std::ifstream;
-using std::string;
-using std::stringstream;
-using std::vector;
-
-typedef vector<string> t_vecString;
 
 namespace Utils
 {
@@ -28,6 +19,7 @@ Server::Server(const Server &src)
 
 Server::Server(const char fileName[])
 {
+	std::cout << "Server constructor called" << std::endl;
 	t_vecString listTokens(readFile(fileName));
 	parseTokens(listTokens);
 }

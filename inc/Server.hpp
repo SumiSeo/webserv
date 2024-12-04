@@ -1,8 +1,7 @@
 #ifndef __SERVER_HPP__
 # define __SERVER_HPP__
 
-# include <string>
-# include <vector>
+# include "Structs.hpp"
 
 class Server
 {
@@ -13,13 +12,14 @@ class Server
 	~Server();
 
 	Server &operator=(const Server &original);
+
   protected:
 	/* data */
   private:
-	typedef std::vector<std::string>	t_vecString;
+	typedef std::vector<std::string> t_vecString;
 
-	t_vecString	readFile(const char fileName[]);
-	void		parseTokens(const t_vecString &tokens);
+	t_vecString readFile(const char fileName[]);
+	void parseTokens(const t_vecString &tokens);
 };
 
 #endif
