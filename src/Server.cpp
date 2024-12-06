@@ -73,9 +73,18 @@ void Server::parseTokens(const t_vecString &tokens)
 {
 	int	sizeTokens;
 
+	std::string value;
+	std::string server = "server";
 	sizeTokens = tokens.size();
-	for (t_vecString::const_iterator it = tokens.begin(); it != tokens.end(); ++it)
-		std::cout << *it << std::endl;
+	for (t_vecString::const_iterator it = tokens.begin(); it != tokens.end(); it++)
+	{
+		value = *it;
+		if (value == server)
+		{
+			std::cout << "yo:" << value << std::endl;
+			break ;
+		}
+	}
 }
 
 // --- Static functions ---
