@@ -1,5 +1,6 @@
 #include "Server.hpp"
 #include <fstream>
+#include <iostream>
 #include <sstream>
 
 using std::ifstream;
@@ -70,7 +71,11 @@ Server::t_vecString Server::readFile(const char filename[])
 
 void Server::parseTokens(const t_vecString &tokens)
 {
-	(void)tokens;
+	int	sizeTokens;
+
+	sizeTokens = tokens.size();
+	for (int i = 0; i < sizeTokens; i++)
+		std::cout << tokens[i] << std::endl;
 }
 
 // --- Static functions ---
