@@ -30,7 +30,7 @@ Server::Server(const Server &src)
 Server::Server(const char fileName[])
 {
 	t_vecString listTokens(readFile(fileName));
-	parseTokens(listTokens);
+	searchTokens(listTokens);
 }
 
 Server::~Server()
@@ -69,7 +69,7 @@ Server::t_vecString Server::readFile(const char filename[])
 	return (listTokens);
 }
 
-void Server::parseTokens(const t_vecString &tokens)
+void Server::searchTokens(const t_vecString &tokens)
 {
 	int	sizeTokens;
 
@@ -82,8 +82,19 @@ void Server::parseTokens(const t_vecString &tokens)
 		if (value == server)
 		{
 			std::cout << "yo:" << value << std::endl;
+			std::cout << "yo:" << &*it << std::endl;
+			parseTokens(it, tokens.end());
 			break ;
 		}
+	}
+}
+
+void Server::parseTokens(t_vecString::const_iterator start,
+	t_vecString::const_iterator end)
+{
+	for (t_vecString::const_iterator it = start; it != end; ++it)
+	{
+		std::cout << "Token: " << *it << std::endl;
 	}
 }
 

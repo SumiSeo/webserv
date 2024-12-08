@@ -20,7 +20,9 @@ class Server
 	typedef std::vector<std::string> t_vecString;
 
 	t_vecString readFile(const char fileName[]);
-	void parseTokens(const t_vecString &tokens);
+	void parseTokens(t_vecString::const_iterator start,
+		t_vecString::const_iterator end);
+	void searchTokens(const t_vecString &tokens);
 };
 
 #endif
