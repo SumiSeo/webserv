@@ -109,7 +109,6 @@ void Server::parseTokens(t_vecString::const_iterator start,
 void Server::tokenToMap(t_vecString::const_iterator start,
 	t_vecString::const_iterator end)
 {
-	std::cout << "token To map callaed" << std::endl;
 	std::string key = *start;
 	std::map<string, std::vector<string> > serverInfo;
 	std::vector<string> names;
@@ -120,6 +119,7 @@ void Server::tokenToMap(t_vecString::const_iterator start,
 	}
 	else
 	{
+		std::cout << "token To map callaed" << std::endl;
 		for (t_vecString::const_iterator it = start; it != end;)
 		{
 			++it;
@@ -146,7 +146,8 @@ void Server::LocationToMap(t_vecString::const_iterator start,
 		++it;
 		if (it != end)
 		{
-			std::cout << "HERE " << *it << std::endl;
+			// values.push_back(*it);
+			std::cout << "check" << std::endl;
 		}
 	}
 }

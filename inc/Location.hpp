@@ -1,20 +1,14 @@
 #ifndef Location_HPP
 # define Location_HPP
 
-# include "iostream"
-class Location
-{
-  private:
-	std::string key;
-	std::string value;
+# include <map>
+# include <string>
+# include <vector>
 
-  protected:
+struct	Location
+{
   public:
-	Location();
-	Location(std::string key, std::string value);
-	Location(const Location &original);
-	Location &operator=(const Location &original);
-	~Location();
+	std::map<std::string, std::vector<std::string> > pairs;
 };
 
 #endif
