@@ -1,6 +1,7 @@
 #include "Server.hpp"
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <sstream>
 
 using std::ifstream;
@@ -92,9 +93,19 @@ void Server::searchTokens(const t_vecString &tokens)
 void Server::parseTokens(t_vecString::const_iterator start,
 	t_vecString::const_iterator end)
 {
-	for (t_vecString::const_iterator it = start; it != end; ++it)
+	std::map<string, string> configInfo;
+	std::string key;
+	for (t_vecString::const_iterator it = start; it != end; it++)
 	{
-		std::cout << "Token: " << *it << std::endl;
+		if (*it == "server" || *it == "{" || *it == ";")
+			continue ;
+		if (*it != "")
+		{
+			key = *it;
+			configInfo[key] = *++it;
+			std::cout << "key " << key << " value " << configInfo[key] << std::endl;
+			continue ;
+		}
 	}
 }
 
