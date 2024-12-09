@@ -108,10 +108,20 @@ void Server::parseTokens(t_vecString::const_iterator start,
 void Server::tokenToMap(t_vecString::const_iterator start,
 	t_vecString::const_iterator end)
 {
-	for (t_vecString::const_iterator it = start; it != end; it++)
+	std::string key = *start;
+	std::map<string, std::vector<string>> serverInfo;
+	std::vector<string> names;
+	for (t_vecString::const_iterator it = start; it != end;)
 	{
-		std::cout << "YO " << *it << std::endl;
+		++it;          // Increment the iterator first
+		if (it != end) // Ensure the iterator is still valid
+		{
+			std::cout << "YO " << *it << std::endl;
+			names.push_back(*it);
+		}
 	}
+	std::cout << *start << " " << names[0] << std::endl;
+	serverInfo.insert(std::make_pair(key, names));
 }
 
 //---Static functions-- -
