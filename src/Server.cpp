@@ -113,9 +113,9 @@ void Server::tokenToMap(t_vecString::const_iterator start,
 	std::string key = *start;
 	std::map<string, std::vector<string> > serverInfo;
 	std::vector<string> names;
-	std::cout << "key : " << key << std::endl;
 	if (key == "location")
 	{
+		std::cout << "key : " << key << std::endl;
 		LocationToMap(start, end, key);
 	}
 	else
@@ -129,18 +129,26 @@ void Server::tokenToMap(t_vecString::const_iterator start,
 				names.push_back(*it);
 			}
 		}
+		serverInfo.insert(std::make_pair(key, names));
 	}
-	serverInfo.insert(std::make_pair(key, names));
 }
 
 void Server::LocationToMap(t_vecString::const_iterator start,
 	t_vecString::const_iterator end, std::string name)
 {
-	Location location(name, name);
-	std::cout << "Location called" << std::endl;
-	(void)start;
-	(void)end;
+	std::map<string, Location> locationInfo;
 	(void)name;
+	start++;
+	std::string locationKey = *start;
+	std::cout << "Location start" << locationKey << std::endl;
+	for (t_vecString::const_iterator it = start; it != end;)
+	{
+		++it;
+		if (it != end)
+		{
+			std::cout << "HERE " << *it << std::endl;
+		}
+	}
 }
 
 //---Static functions-- -

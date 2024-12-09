@@ -1,6 +1,7 @@
 
 #include "Location.hpp"
 
+Location::Location(){};
 Location::Location(std::string key, std::string value)
 {
 	this->key = key;

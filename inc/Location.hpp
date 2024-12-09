@@ -10,6 +10,7 @@ class Location
 
   protected:
   public:
+	Location();
 	Location(std::string key, std::string value);
 	Location(const Location &original);
 	Location &operator=(const Location &original);
