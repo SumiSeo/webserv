@@ -1,3 +1,4 @@
+#include "Location.hpp"
 #include "Server.hpp"
 #include <fstream>
 #include <iostream>
@@ -108,20 +109,38 @@ void Server::parseTokens(t_vecString::const_iterator start,
 void Server::tokenToMap(t_vecString::const_iterator start,
 	t_vecString::const_iterator end)
 {
+	std::cout << "token To map callaed" << std::endl;
 	std::string key = *start;
-	std::map<string, std::vector<string>> serverInfo;
+	std::map<string, std::vector<string> > serverInfo;
 	std::vector<string> names;
-	for (t_vecString::const_iterator it = start; it != end;)
+	std::cout << "key : " << key << std::endl;
+	if (key == "location")
 	{
-		++it;          // Increment the iterator first
-		if (it != end) // Ensure the iterator is still valid
+		LocationToMap(start, end, key);
+	}
+	else
+	{
+		for (t_vecString::const_iterator it = start; it != end;)
 		{
-			std::cout << "YO " << *it << std::endl;
-			names.push_back(*it);
+			++it;
+			if (it != end)
+			{
+				std::cout << "YO " << *it << std::endl;
+				names.push_back(*it);
+			}
 		}
 	}
-	std::cout << *start << " " << names[0] << std::endl;
 	serverInfo.insert(std::make_pair(key, names));
+}
+
+void Server::LocationToMap(t_vecString::const_iterator start,
+	t_vecString::const_iterator end, std::string name)
+{
+	Location location(name, name);
+	std::cout << "Location called" << std::endl;
+	(void)start;
+	(void)end;
+	(void)name;
 }
 
 //---Static functions-- -

@@ -25,6 +25,8 @@ class Server
 	void searchTokens(const t_vecString &tokens);
 	void tokenToMap(t_vecString::const_iterator start,
 		t_vecString::const_iterator end);
+	void LocationToMap(t_vecString::const_iterator start,
+		t_vecString::const_iterator end, std::string name);
 };
 
 #endif
