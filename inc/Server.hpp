@@ -23,6 +23,8 @@ class Server
 	void parseTokens(t_vecString::const_iterator start,
 		t_vecString::const_iterator end);
 	void searchTokens(const t_vecString &tokens);
+	void tokenToMap(t_vecString::const_iterator start,
+		t_vecString::const_iterator end);
 };
 
 #endif

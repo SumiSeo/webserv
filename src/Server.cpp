@@ -82,8 +82,6 @@ void Server::searchTokens(const t_vecString &tokens)
 		value = *it;
 		if (value == server)
 		{
-			std::cout << "yo:" << value << std::endl;
-			std::cout << "yo:" << &*it << std::endl;
 			parseTokens(it, tokens.end());
 			break ;
 		}
@@ -93,23 +91,30 @@ void Server::searchTokens(const t_vecString &tokens)
 void Server::parseTokens(t_vecString::const_iterator start,
 	t_vecString::const_iterator end)
 {
-	std::map<string, string> configInfo;
-	std::string key;
 	for (t_vecString::const_iterator it = start; it != end; it++)
 	{
-		if (*it == "server" || *it == "{" || *it == ";")
+		if (*it == "server" || *it == "{")
 			continue ;
-		if (*it != "")
-		{
-			key = *it;
-			configInfo[key] = *++it;
-			std::cout << "key " << key << " value " << configInfo[key] << std::endl;
-			continue ;
-		}
+		t_vecString::const_iterator start = it;
+		while (it != end && *it != ";")
+			it++;
+		tokenToMap(start, it);
+		if (it == end)
+			break ;
+		std::cout << std::endl;
 	}
 }
 
-// --- Static functions ---
+void Server::tokenToMap(t_vecString::const_iterator start,
+	t_vecString::const_iterator end)
+{
+	for (t_vecString::const_iterator it = start; it != end; it++)
+	{
+		std::cout << "YO " << *it << std::endl;
+	}
+}
+
+//---Static functions-- -
 
 t_vecString Utils::split(const string &str, char delim)
 {
