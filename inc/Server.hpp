@@ -31,6 +31,10 @@ class Server
 		t_vecString::const_iterator end);
 	void LocationToMap(t_vecString::const_iterator start,
 		t_vecString::const_iterator end);
+
+
+	//debugging functions
+	void printKeyValues(void);
 };
 
 #endif

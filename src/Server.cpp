@@ -86,14 +86,7 @@ void Server::searchTokens(const t_vecString &tokens)
 			break ;
 		}
 	}
-
-	
-	for(std::map<std::string, std::vector<std::string> >::iterator it = _configs.begin(); it!=_configs.end(); it++)
-		std::cout << "key ::" << it->first <<std::endl;
-
-	for(std::map<std::string, Location >::iterator it = _locations.begin(); it!=_locations.end(); it++)
-		std::cout << "key ::" << it->first <<std::endl;
-
+	printKeyValues();
 }
 
 void Server::parseTokens(t_vecString::const_iterator start,
@@ -157,7 +150,6 @@ void Server::LocationToMap(t_vecString::const_iterator start,
 	std::vector<string> locationValues;
 	start++;
 	std::string locationKey = *start;	
-	std::cout << "Location start : " << locationKey << std::endl;
 	for (t_vecString::const_iterator it = start; it != end;)
 	{
 		++it;
@@ -173,8 +165,6 @@ void Server::LocationToMap(t_vecString::const_iterator start,
 		}
 		 _locations.insert(std::make_pair(locationKey,location));
 	}
-
-	
 }
 
 //---Static functions-- -
@@ -196,4 +186,30 @@ t_vecString Utils::split(const string &str, char delim)
 	if (pos < str.size())
 		words.push_back(str.substr(pos));
 	return (words);
+}
+
+void Server::printKeyValues(void)
+{
+	for(std::map<std::string, std::vector<std::string> >::iterator it = _configs.begin(); it!=_configs.end(); it++)
+	{
+		std::cout << "key [" << it->first << "]" <<std::endl;
+	    for (std::vector<std::string>::iterator valIt = it->second.begin(); valIt != it->second.end(); ++valIt)
+        	std::cout << "  value [" << *valIt << "]"<< std::endl;
+	}	
+
+	for (std::map<std::string, Location>::iterator it = _locations.begin(); it != _locations.end(); ++it) 
+	{
+    	std::cout << "key [" << it->first << "]" << std::endl;
+    	const Location& loc = it->second;
+		for (std::map<std::string, std::vector<std::string> >::const_iterator pairIt = loc.pairs.begin(); 
+			pairIt != loc.pairs.end(); 
+			++pairIt) 
+		{
+			std::cout << "  pair key [" << pairIt->first << "]"<< std::endl;
+			for (std::vector<std::string>::const_iterator valIt = pairIt->second.begin(); 
+				valIt != pairIt->second.end(); 
+				++valIt)
+				std::cout << "  pair value [" << *valIt << "]"<< std::endl;
+		}
+	}
 }
