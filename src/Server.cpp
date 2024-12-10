@@ -92,14 +92,33 @@ void Server::searchTokens(const t_vecString &tokens)
 void Server::parseTokens(t_vecString::const_iterator start,
 	t_vecString::const_iterator end)
 {
+	int depthCheck = 1;
 	for (t_vecString::const_iterator it = start; it != end; it++)
 	{
 		if (*it == "server" || *it == "{")
 			continue ;
 		t_vecString::const_iterator start = it;
-		while (it != end && *it != ";")
-			it++;
-		tokenToMap(start, it);
+		while (it != end)
+		{
+			if (*it == "{") 
+			{
+				it++;
+				depthCheck = 0;
+			} 
+			else if (*it == ";" && depthCheck == 1) {
+        		tokenToMap(start, it);
+				std::cout << std::endl;
+        		start = it++; 
+			} 
+			else if (*it == "}") 
+			{
+				tokenToMap(start, it);
+				depthCheck = 1;
+				break; 
+			} 
+			else 
+				it++;
+		}
 		if (it == end)
 			break ;
 		std::cout << std::endl;
@@ -136,18 +155,24 @@ void Server::tokenToMap(t_vecString::const_iterator start,
 void Server::LocationToMap(t_vecString::const_iterator start,
 	t_vecString::const_iterator end, std::string name)
 {
+	Location location;
+	std::vector<string> locationValues;
 	std::map<string, Location> locationInfo;
-	(void)name;
 	start++;
+	(void)name;
 	std::string locationKey = *start;
+	
+	//location key
 	std::cout << "Location start" << locationKey << std::endl;
+
+	//stocker les valeurs de location
 	for (t_vecString::const_iterator it = start; it != end;)
 	{
 		++it;
 		if (it != end)
 		{
-			// values.push_back(*it);
-			std::cout << "check" << std::endl;
+			locationValues.push_back(*it);
+			std::cout << *it << std::endl;
 		}
 	}
 }
