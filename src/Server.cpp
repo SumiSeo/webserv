@@ -86,7 +86,12 @@ void Server::searchTokens(const t_vecString &tokens)
 			break ;
 		}
 	}
-	// std::cout <<"Final chekc" << _pairs[0][0] <<std::endl;
+	for(std::map<std::string, std::vector<std::string> >::iterator it = _configs.begin(); it!=_configs.end(); it++)
+		std::cout << "key ::" << it->first <<std::endl;
+
+	for(std::map<std::string, Location >::iterator it = _locations.begin(); it!=_locations.end(); it++)
+		std::cout << "key ::" << it->first <<std::endl;
+
 }
 
 void Server::parseTokens(t_vecString::const_iterator start,
@@ -130,7 +135,7 @@ void Server::tokenToMap(t_vecString::const_iterator start,
 	std::cout << std::endl;
 	std::string key = *start;
 	std::vector<string> names;
-	if (key == "location")
+	if (key == "location")	
 		LocationToMap(start, end, key);
 	else
 	{
@@ -140,8 +145,9 @@ void Server::tokenToMap(t_vecString::const_iterator start,
 			if (it != end)
 				names.push_back(*it);
 		}
-		_pairs.insert(std::make_pair(key, names));
-	}
+		_configs.insert(std::make_pair(key, names));
+	}	
+
 }
 
 void Server::LocationToMap(t_vecString::const_iterator start,
@@ -170,13 +176,13 @@ void Server::LocationToMap(t_vecString::const_iterator start,
 			it++;
 			if(*it!=";" && it!=end)
 				locationValues.push_back(*it);
-			
 			location.pairs.insert(std::make_pair(key, locationValues));
-			// std::cout <<"Value check "<< *it << std::endl;
+
 		}
-		_locations.insert(std::make_pair(locationKey,location));
-		// have to add in _locations 
+		 _locations.insert(std::make_pair(locationKey,location));
 	}
+
+	
 }
 
 //---Static functions-- -

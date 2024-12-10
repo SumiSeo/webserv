@@ -20,7 +20,7 @@ class Server
   private:
 	typedef std::vector<std::string> t_vecString;
 
-	std::map<std::string, std::vector<std::string> >	_pairs;
+	std::map<std::string, std::vector<std::string> >	_configs;
 	std::map<std::string, Location>						_locations;
 
 	t_vecString readFile(const char fileName[]);
