@@ -30,7 +30,7 @@ class Server
 	void tokenToMap(t_vecString::const_iterator start,
 		t_vecString::const_iterator end);
 	void LocationToMap(t_vecString::const_iterator start,
-		t_vecString::const_iterator end, std::string name);
+		t_vecString::const_iterator end);
 };
 
 #endif
