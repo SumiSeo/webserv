@@ -3,6 +3,7 @@
 
 # include <string>
 # include <vector>
+# include "Location.hpp"
 
 class Server
 {
@@ -18,6 +19,9 @@ class Server
 	/* data */
   private:
 	typedef std::vector<std::string> t_vecString;
+
+	std::map<std::string, std::vector<std::string> >	_pairs;
+	std::map<std::string, Location>						_locations;
 
 	t_vecString readFile(const char fileName[]);
 	void parseTokens(t_vecString::const_iterator start,

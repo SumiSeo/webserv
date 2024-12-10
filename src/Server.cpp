@@ -1,4 +1,3 @@
-#include "Location.hpp"
 #include "Server.hpp"
 #include <fstream>
 #include <iostream>
@@ -87,6 +86,7 @@ void Server::searchTokens(const t_vecString &tokens)
 			break ;
 		}
 	}
+	// std::cout <<"Final chekc" << _pairs[0][0] <<std::endl;
 }
 
 void Server::parseTokens(t_vecString::const_iterator start,
@@ -102,13 +102,12 @@ void Server::parseTokens(t_vecString::const_iterator start,
 		{
 			if (*it == "{") 
 			{
-				it++;
+				++it;
 				depthCheck = 0;
 			} 
 			else if (*it == ";" && depthCheck == 1) {
         		tokenToMap(start, it);
-				std::cout << std::endl;
-        		start = it++; 
+        		start = ++it; 
 			} 
 			else if (*it == "}") 
 			{
@@ -121,34 +120,27 @@ void Server::parseTokens(t_vecString::const_iterator start,
 		}
 		if (it == end)
 			break ;
-		std::cout << std::endl;
 	}
 }
 
 void Server::tokenToMap(t_vecString::const_iterator start,
 	t_vecString::const_iterator end)
 {
+	//the next line should be deleted
+	std::cout << std::endl;
 	std::string key = *start;
-	std::map<string, std::vector<string> > serverInfo;
 	std::vector<string> names;
 	if (key == "location")
-	{
-		std::cout << "key : " << key << std::endl;
 		LocationToMap(start, end, key);
-	}
 	else
 	{
-		std::cout << "token To map callaed" << std::endl;
 		for (t_vecString::const_iterator it = start; it != end;)
 		{
 			++it;
 			if (it != end)
-			{
-				std::cout << "YO " << *it << std::endl;
 				names.push_back(*it);
-			}
 		}
-		serverInfo.insert(std::make_pair(key, names));
+		_pairs.insert(std::make_pair(key, names));
 	}
 }
 
@@ -157,23 +149,33 @@ void Server::LocationToMap(t_vecString::const_iterator start,
 {
 	Location location;
 	std::vector<string> locationValues;
-	std::map<string, Location> locationInfo;
 	start++;
-	(void)name;
 	std::string locationKey = *start;
+	(void)name;
+	// int valueInserted;
+
 	
 	//location key
-	std::cout << "Location start" << locationKey << std::endl;
+	std::cout << "Location start : " << locationKey << std::endl;
 
 	//stocker les valeurs de location
 	for (t_vecString::const_iterator it = start; it != end;)
 	{
 		++it;
+		if(*it== "{")
+			continue;
 		if (it != end)
 		{
-			locationValues.push_back(*it);
-			std::cout << *it << std::endl;
+			std::string key = *it;
+			it++;
+			if(*it!=";" && it!=end)
+				locationValues.push_back(*it);
+			
+			location.pairs.insert(std::make_pair(key, locationValues));
+			// std::cout <<"Value check "<< *it << std::endl;
 		}
+		_locations.insert(std::make_pair(locationKey,location));
+		// have to add in _locations 
 	}
 }
 
