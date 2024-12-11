@@ -1,5 +1,7 @@
 #include "Server.hpp"
 #include <fstream>
+#include <iostream>
+#include <map>
 #include <sstream>
 
 using std::ifstream;
@@ -29,7 +31,7 @@ Server::Server(const Server &src)
 Server::Server(const char fileName[])
 {
 	t_vecString listTokens(readFile(fileName));
-	parseTokens(listTokens);
+	searchTokens(listTokens);
 }
 
 Server::~Server()
@@ -68,12 +70,104 @@ Server::t_vecString Server::readFile(const char filename[])
 	return (listTokens);
 }
 
-void Server::parseTokens(const t_vecString &tokens)
+void Server::searchTokens(const t_vecString &tokens)
 {
-	(void)tokens;
+	int	sizeTokens;
+
+	std::string value;
+	std::string server = "server";
+	sizeTokens = tokens.size();
+	for (t_vecString::const_iterator it = tokens.begin(); it != tokens.end(); it++)
+	{
+		value = *it;
+		if (value == server)
+		{
+			parseTokens(it, tokens.end());
+			break ;
+		}
+	}
+	printKeyValues();
 }
 
-// --- Static functions ---
+void Server::parseTokens(t_vecString::const_iterator start,
+	t_vecString::const_iterator end)
+{
+	int depthCheck = 1;
+	for (t_vecString::const_iterator it = start; it != end; it++)
+	{
+		if (*it == "server" || *it == "{" || *it == "}")
+			continue ;
+		t_vecString::const_iterator start = it;
+		while (it != end)
+		{
+			if (*it == "{") 
+			{
+				++it;
+				depthCheck = 0;
+			} 
+			else if (*it == ";" && depthCheck == 1) {
+        		tokenToMap(start, it);
+        		start = ++it; 
+			} 
+			else if (*it == "}") 
+			{
+				tokenToMap(start, it);
+				depthCheck = 1;
+				break; 
+			} 
+			else 
+				it++;
+		}
+		if (it == end)
+			break ;
+	}
+}
+
+void Server::tokenToMap(t_vecString::const_iterator start,
+	t_vecString::const_iterator end)
+{
+	std::string key = *start;
+	std::vector<string> names;
+	if (key == "location")	
+		LocationToMap(start, end);
+	else
+	{
+		for (t_vecString::const_iterator it = start; it != end;)
+		{
+			++it;
+			if (it != end)
+				names.push_back(*it);
+		}
+		_configs.insert(std::make_pair(key, names));
+	}	
+
+}
+
+void Server::LocationToMap(t_vecString::const_iterator start,
+	t_vecString::const_iterator end)
+{
+	Location location;
+	std::vector<string> locationValues;
+	start++;
+	std::string locationKey = *start;	
+	for (t_vecString::const_iterator it = start; it != end;)
+	{
+		++it;
+		if(*it== "{")
+			continue;
+		if (it != end)
+		{
+			std::string key = *it;
+			it++;
+			if(*it!=";" && it!=end)
+				locationValues.push_back(*it);
+			location.pairs.insert(std::make_pair(key, locationValues));
+		}
+		 _locations.insert(std::make_pair(locationKey,location));
+	}
+}
+
+//---Static functions-- -
 
 t_vecString Utils::split(const string &str, char delim)
 {
@@ -92,4 +186,30 @@ t_vecString Utils::split(const string &str, char delim)
 	if (pos < str.size())
 		words.push_back(str.substr(pos));
 	return (words);
+}
+
+void Server::printKeyValues(void)
+{
+	for(std::map<std::string, std::vector<std::string> >::iterator it = _configs.begin(); it!=_configs.end(); it++)
+	{
+		std::cout << "key [" << it->first << "]" <<std::endl;
+	    for (std::vector<std::string>::iterator valIt = it->second.begin(); valIt != it->second.end(); ++valIt)
+        	std::cout << "  value [" << *valIt << "]"<< std::endl;
+	}	
+
+	for (std::map<std::string, Location>::iterator it = _locations.begin(); it != _locations.end(); ++it) 
+	{
+    	std::cout << "key [" << it->first << "]" << std::endl;
+    	const Location& loc = it->second;
+		for (std::map<std::string, std::vector<std::string> >::const_iterator pairIt = loc.pairs.begin(); 
+			pairIt != loc.pairs.end(); 
+			++pairIt) 
+		{
+			std::cout << "  pair key [" << pairIt->first << "]"<< std::endl;
+			for (std::vector<std::string>::const_iterator valIt = pairIt->second.begin(); 
+				valIt != pairIt->second.end(); 
+				++valIt)
+				std::cout << "  pair value [" << *valIt << "]"<< std::endl;
+		}
+	}
 }

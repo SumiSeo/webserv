@@ -3,6 +3,7 @@
 
 # include <string>
 # include <vector>
+# include "Location.hpp"
 
 class Server
 {
@@ -13,13 +14,27 @@ class Server
 	~Server();
 
 	Server &operator=(const Server &original);
+
   protected:
 	/* data */
   private:
-	typedef std::vector<std::string>	t_vecString;
+	typedef std::vector<std::string> t_vecString;
 
-	t_vecString	readFile(const char fileName[]);
-	void		parseTokens(const t_vecString &tokens);
+	std::map<std::string, std::vector<std::string> >	_configs;
+	std::map<std::string, Location>						_locations;
+
+	t_vecString readFile(const char fileName[]);
+	void parseTokens(t_vecString::const_iterator start,
+		t_vecString::const_iterator end);
+	void searchTokens(const t_vecString &tokens);
+	void tokenToMap(t_vecString::const_iterator start,
+		t_vecString::const_iterator end);
+	void LocationToMap(t_vecString::const_iterator start,
+		t_vecString::const_iterator end);
+
+
+	//debugging functions
+	void printKeyValues(void);
 };
 
 #endif
