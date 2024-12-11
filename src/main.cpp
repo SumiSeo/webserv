@@ -6,14 +6,14 @@
 /*   By: sumseo <sumseo@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/11/07 16:00:23 by pnguyen-          #+#    #+#             */
-/*   Updated: 2024/12/03 16:09:11 by pnguyen-         ###   ########.fr       */
+/*   Updated: 2024/12/11 15:38:10 by sumseo           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <exception>
 #include <iostream>
 
-#include "Server.hpp"
+#include "WebServer.hpp"
 
 using std::cerr;
 using std::cout;
@@ -28,7 +28,7 @@ int	main(int argc, char **argv)
 	}
 	try
 	{
-		Server	server(argv[1]);
+		WebServer	server(argv[1]);
 	}
 	catch (const std::exception &e)
 	{

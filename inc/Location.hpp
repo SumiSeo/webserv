@@ -8,7 +8,7 @@
 struct	Location
 {
   public:
-	std::map<std::string, std::vector<std::string> > pairs;
+	  std::map<std::string, std::vector<std::string> > _pairs;
 };
 
 #endif

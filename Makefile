@@ -15,7 +15,7 @@ BEGIN	:=	\e[1A\e[K
 DEFAULT	:=	\e(B\e[m
 
 FILES	:=	main.cpp \
-			Server.cpp \
+			WebServer.cpp \
 
 SRC_DIR	:=	src
 OBJ_DIR	:=	obj

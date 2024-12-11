@@ -1,8 +1,9 @@
-#include "Server.hpp"
+#include "WebServer.hpp"
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <sstream>
+
 
 using std::ifstream;
 using std::string;
@@ -13,14 +14,16 @@ typedef vector<string> t_vecString;
 
 namespace Utils
 {
-t_vecString	split(const string &str, char delim);
+	t_vecString	split(const string &str, char delim);
 };
 
-Server::Server()
+WebServer::WebServer()
 {
+	Server server;
+
 }
 
-Server::Server(const Server &src)
+WebServer::WebServer(const WebServer &src)
 {
 	if (this != &src)
 	{
@@ -28,17 +31,17 @@ Server::Server(const Server &src)
 	}
 }
 
-Server::Server(const char fileName[])
+WebServer::WebServer(const char fileName[])
 {
 	t_vecString listTokens(readFile(fileName));
 	searchTokens(listTokens);
 }
 
-Server::~Server()
+WebServer::~WebServer()
 {
 }
 
-Server &Server::operator=(const Server &rhs)
+WebServer &WebServer::operator=(const WebServer &rhs)
 {
 	if (this != &rhs)
 	{
@@ -49,7 +52,7 @@ Server &Server::operator=(const Server &rhs)
 
 // --- Private methods ---
 
-Server::t_vecString Server::readFile(const char filename[])
+WebServer::t_vecString WebServer::readFile(const char filename[])
 {
 	t_vecString	listTokens;
 
@@ -70,28 +73,35 @@ Server::t_vecString Server::readFile(const char filename[])
 	return (listTokens);
 }
 
-void Server::searchTokens(const t_vecString &tokens)
+void WebServer::searchTokens(const t_vecString &tokens)
 {
 	int	sizeTokens;
 
-	std::string value;
-	std::string server = "server";
+	
+	std::string const server = "server";
+
 	sizeTokens = tokens.size();
 	for (t_vecString::const_iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
-		value = *it;
+		std::string value = *it;
 		if (value == server)
 		{
-			parseTokens(it, tokens.end());
-			break ;
+			_servers.push_back(Server());
+			// Server serverTemp;
+			parseTokens(it + 1, tokens.end());
+			// break ;
 		}
 	}
 	printKeyValues();
 }
 
-void Server::parseTokens(t_vecString::const_iterator start,
+void WebServer::parseTokens(t_vecString::const_iterator start,
 	t_vecString::const_iterator end)
 {
+	if (start == end || *start != "{")
+		throw std::runtime_error("Missing token '{'");
+
+	start++;
 	int depthCheck = 1;
 	for (t_vecString::const_iterator it = start; it != end; it++)
 	{
@@ -121,31 +131,19 @@ void Server::parseTokens(t_vecString::const_iterator start,
 		if (it == end)
 			break ;
 	}
+
 }
 
-void Server::tokenToMap(t_vecString::const_iterator start,
+void WebServer::tokenToMap(t_vecString::const_iterator start,
 	t_vecString::const_iterator end)
 {
 	std::string key = *start;
 	std::vector<string> names;
-	if (key == "location")	
-		LocationToMap(start, end);
-	else
-	{
-		for (t_vecString::const_iterator it = start; it != end;)
-		{
-			++it;
-			if (it != end)
-				names.push_back(*it);
-		}
-		_configs.insert(std::make_pair(key, names));
-	}	
-}
+	Server &server = _servers.back();
 
-void Server::LocationToMap(t_vecString::const_iterator start,
-                           t_vecString::const_iterator end) 
-{
-    while (start != end) 
+	if (key == "location")	
+	{
+		 while (start != end) 
 	{
 	
 		++start;
@@ -171,15 +169,58 @@ void Server::LocationToMap(t_vecString::const_iterator start,
 				locationValues.push_back(*start);
 				++start;
 			}
-			location.pairs.insert(std::make_pair(key, locationValues));
+			location._pairs.insert(std::make_pair(key, locationValues));
 			if (start != end && *start == ";") 
 				++start;
 			
 		}
-		_locations.insert(std::make_pair(locationKey, location));
+		server._locations.insert(std::make_pair(locationKey, location));
     }
+	}
+	else
+	{
+		for (t_vecString::const_iterator it = start; it != end;)
+		{
+			++it;
+			if (it != end)
+				names.push_back(*it);
+		}
+		server._configs.insert(std::make_pair(key, names));
+	}	
 }
 
+void WebServer::printKeyValues(void)
+{
+
+	for(std::vector<Server>::const_iterator serverIt = _servers.begin(); serverIt != _servers.end(); serverIt++)
+	{
+		std::cout << "Server" << std::endl;
+		for(std::map<std::string, std::vector<std::string> >::const_iterator it = serverIt->_configs.begin(); it!=serverIt->_configs.end(); it++)
+		{
+			std::cout << "key [" << it->first << "]" <<std::endl;
+			for (std::vector<std::string>::const_iterator valIt = it->second.begin(); valIt != it->second.end(); ++valIt)
+				std::cout << "  value [" << *valIt << "]"<< std::endl;
+		}	
+
+		for (std::map<std::string, Location>::const_iterator it = serverIt->_locations.begin(); it != serverIt->_locations.end(); ++it) 
+		{
+			std::cout << "Location : key [" << it->first << "]" << std::endl;
+			const Location& loc = it->second;
+			for (std::map<std::string, std::vector<std::string> >::const_iterator pairIt = loc._pairs.begin(); 
+				pairIt != loc._pairs.end(); 
+				++pairIt) 
+			{
+				std::cout << "  pair key [" << pairIt->first << "]"<< std::endl;
+				for (std::vector<std::string>::const_iterator valIt = pairIt->second.begin(); 
+					valIt != pairIt->second.end(); 
+					++valIt)
+					std::cout << "  pair value [" << *valIt << "]"<< std::endl;
+			}
+		
+	}
+	
+	}
+}
 //---Static functions-- -
 
 t_vecString Utils::split(const string &str, char delim)
@@ -201,28 +242,3 @@ t_vecString Utils::split(const string &str, char delim)
 	return (words);
 }
 
-void Server::printKeyValues(void)
-{
-	for(std::map<std::string, std::vector<std::string> >::iterator it = _configs.begin(); it!=_configs.end(); it++)
-	{
-		std::cout << "key [" << it->first << "]" <<std::endl;
-	    for (std::vector<std::string>::iterator valIt = it->second.begin(); valIt != it->second.end(); ++valIt)
-        	std::cout << "  value [" << *valIt << "]"<< std::endl;
-	}	
-
-	for (std::map<std::string, Location>::iterator it = _locations.begin(); it != _locations.end(); ++it) 
-	{
-    	std::cout << "key [" << it->first << "]" << std::endl;
-    	const Location& loc = it->second;
-		for (std::map<std::string, std::vector<std::string> >::const_iterator pairIt = loc.pairs.begin(); 
-			pairIt != loc.pairs.end(); 
-			++pairIt) 
-		{
-			std::cout << "  pair key [" << pairIt->first << "]"<< std::endl;
-			for (std::vector<std::string>::const_iterator valIt = pairIt->second.begin(); 
-				valIt != pairIt->second.end(); 
-				++valIt)
-				std::cout << "  pair value [" << *valIt << "]"<< std::endl;
-		}
-	}
-}
