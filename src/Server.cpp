@@ -140,7 +140,6 @@ void Server::tokenToMap(t_vecString::const_iterator start,
 		}
 		_configs.insert(std::make_pair(key, names));
 	}	
-
 }
 
 void Server::LocationToMap(t_vecString::const_iterator start,
@@ -148,44 +147,36 @@ void Server::LocationToMap(t_vecString::const_iterator start,
 {
     while (start != end) 
 	{
-        if (*start == "location") 
+	
+		++start;
+		if (start == end) 
+			break; 
+
+		Location location;
+		std::vector<std::string> locationValues;
+		std::string locationKey = *start;
+		++start;
+		while (start != end && *start != "}") 
 		{
-            ++start;
-            if (start == end) 
-                break; 
-
-            Location location;
-            std::vector<std::string> locationValues;
-
-            std::string locationKey = *start;
-            ++start;
-
-            while (start != end && *start != "}") 
+			if (*start == "{") 
 			{
-                if (*start == "{") 
-				{
-                    ++start; 
-                    continue;
-                }
-                std::string key = *start;
-                locationValues.clear();
-                ++start; 
-                while (start != end && *start != ";" && *start != "}") 
-				{
-                    locationValues.push_back(*start);
-                    ++start;
-                }
-                if (!key.empty()) 
-                    location.pairs.insert(std::make_pair(key, locationValues));
-                
-                if (start != end && *start == ";") 
-                    ++start;
-                
-            }
-            _locations.insert(std::make_pair(locationKey, location));
-        } 
-		else 
-            ++start; 
+				++start; 
+				continue;
+			}
+			std::string key = *start;
+			locationValues.clear();
+			++start; 
+			while (start != end && *start != ";" && *start != "}") 
+			{
+				locationValues.push_back(*start);
+				++start;
+			}
+			location.pairs.insert(std::make_pair(key, locationValues));
+			if (start != end && *start == ";") 
+				++start;
+			
+		}
+		_locations.insert(std::make_pair(locationKey, location));
     }
 }
 
