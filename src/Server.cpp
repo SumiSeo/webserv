@@ -144,27 +144,49 @@ void Server::tokenToMap(t_vecString::const_iterator start,
 }
 
 void Server::LocationToMap(t_vecString::const_iterator start,
-	t_vecString::const_iterator end)
+                           t_vecString::const_iterator end) 
 {
-	Location location;
-	std::vector<string> locationValues;
-	start++;
-	std::string locationKey = *start;	
-	for (t_vecString::const_iterator it = start; it != end;)
+    while (start != end) 
 	{
-		++it;
-		if(*it== "{")
-			continue;
-		if (it != end)
+        if (*start == "location") 
 		{
-			std::string key = *it;
-			it++;
-			if(*it!=";" && it!=end)
-				locationValues.push_back(*it);
-			location.pairs.insert(std::make_pair(key, locationValues));
-		}
-		 _locations.insert(std::make_pair(locationKey,location));
-	}
+            ++start;
+            if (start == end) 
+                break; 
+
+            Location location;
+            std::vector<std::string> locationValues;
+
+            std::string locationKey = *start;
+            ++start;
+
+            while (start != end && *start != "}") 
+			{
+                if (*start == "{") 
+				{
+                    ++start; 
+                    continue;
+                }
+                std::string key = *start;
+                locationValues.clear();
+                ++start; 
+                while (start != end && *start != ";" && *start != "}") 
+				{
+                    locationValues.push_back(*start);
+                    ++start;
+                }
+                if (!key.empty()) 
+                    location.pairs.insert(std::make_pair(key, locationValues));
+                
+                if (start != end && *start == ";") 
+                    ++start;
+                
+            }
+            _locations.insert(std::make_pair(locationKey, location));
+        } 
+		else 
+            ++start; 
+    }
 }
 
 //---Static functions-- -
