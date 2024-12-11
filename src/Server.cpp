@@ -97,7 +97,7 @@ void Server::parseTokens(t_vecString::const_iterator start,
 	{
 		if (*it == "server" || *it == "{" || *it == "}")
 			continue ;
-		t_vecString::const_iterator start = it;
+		t_vecString::const_iterator restart = it;
 		while (it != end)
 		{
 			if (*it == "{") 
@@ -106,12 +106,12 @@ void Server::parseTokens(t_vecString::const_iterator start,
 				depthCheck = 0;
 			} 
 			else if (*it == ";" && depthCheck == 1) {
-        		tokenToMap(start, it);
-        		start = ++it; 
+        		tokenToMap(restart, it);
+        		restart = ++it; 
 			} 
 			else if (*it == "}") 
 			{
-				tokenToMap(start, it);
+				tokenToMap(restart, it);
 				depthCheck = 1;
 				break; 
 			} 
