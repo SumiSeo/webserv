@@ -11,9 +11,26 @@ using std::vector;
 
 typedef vector<string> t_vecString;
 
+namespace
+{
+	char const *const	SERVER_KEYS[] = {
+		"listen",
+		"server_name",
+		"error_page",
+		NULL,
+	};
+	char const *const	LOCATION_KEYS[] = {
+		"root",
+		"autoindex",
+		NULL,
+	};
+}
+
 namespace Utils
 {
 	t_vecString	split(const string &str, char delim);
+	bool		isValidKeyServer(string const &key);
+	bool		isValidKeyLocation(string const &key);
 };
 
 WebServer::WebServer()
@@ -160,6 +177,8 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 			}
 			std::string key = *start;
 			locationValues.clear();
+			if (!Utils::isValidKeyLocation(key))
+				throw std::runtime_error("Invalid key found in location block");
 			++start; 
 			while (start != end && *start != ";" && *start != "}") 
 			{
@@ -176,6 +195,8 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 	}
 	else
 	{
+		if (!Utils::isValidKeyServer(key))
+			throw std::runtime_error("Invalid key found server block");
 		for (t_vecString::const_iterator it = start; it != end;)
 		{
 			++it;
@@ -241,3 +262,22 @@ t_vecString Utils::split(const string &str, char delim)
 	return (words);
 }
 
+bool	Utils::isValidKeyServer(string const &key)
+{
+	for (std::size_t i = 0; SERVER_KEYS[i] != NULL; ++i)
+	{
+		if (key == SERVER_KEYS[i])
+			return true;
+	}
+	return false;
+}
+
+bool	Utils::isValidKeyLocation(string const &key)
+{
+	for (std::size_t i = 0; LOCATION_KEYS[i] != NULL; ++i)
+	{
+		if (key == LOCATION_KEYS[i])
+			return true;
+	}
+	return false;
+}
