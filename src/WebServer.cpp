@@ -101,9 +101,7 @@ void WebServer::searchTokens(const t_vecString &tokens)
 		if (value == server)
 		{
 			_servers.push_back(Server());
-			// Server serverTemp;
 			parseTokens(it + 1, tokens.end());
-			// break ;
 		}
 	}
 	printKeyValues();
@@ -158,40 +156,40 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 	if (key == "location")	
 	{
 		 while (start != end) 
-	{
-	
-		++start;
-		if (start == end) 
-			break; 
-
-		Location location;
-		std::vector<std::string> locationValues;
-		std::string locationKey = *start;
-		++start;
-		while (start != end && *start != "}") 
 		{
-			if (*start == "{") 
+		
+			++start;
+			if (start == end) 
+				break; 
+
+			Location location;
+			std::vector<std::string> locationValues;
+			std::string locationKey = *start;
+			++start;
+			while (start != end && *start != "}") 
 			{
+				if (*start == "{") 
+				{
+					++start; 
+					continue;
+				}
+				std::string key = *start;
+				locationValues.clear();
+				if (!Utils::isValidKeyLocation(key))
+					throw std::runtime_error("Invalid key found in location block");
 				++start; 
-				continue;
+				while (start != end && *start != ";" && *start != "}") 
+				{
+					locationValues.push_back(*start);
+					++start;
+				}
+				location._pairs.insert(std::make_pair(key, locationValues));
+				if (start != end && *start == ";") 
+					++start;
+				
 			}
-			std::string key = *start;
-			locationValues.clear();
-			if (!Utils::isValidKeyLocation(key))
-				throw std::runtime_error("Invalid key found in location block");
-			++start; 
-			while (start != end && *start != ";" && *start != "}") 
-			{
-				locationValues.push_back(*start);
-				++start;
-			}
-			location._pairs.insert(std::make_pair(key, locationValues));
-			if (start != end && *start == ";") 
-				++start;
-			
-		}
-		server._locations.insert(std::make_pair(locationKey, location));
-    }
+			server._locations.insert(std::make_pair(locationKey, location));
+    	}
 	}
 	else
 	{
@@ -234,9 +232,7 @@ void WebServer::printKeyValues(void)
 					++valIt)
 					std::cout << "  pair value [" << *valIt << "]"<< std::endl;
 			}
-		
-	}
-	
+		}
 	}
 }
 //---Static functions-- -
