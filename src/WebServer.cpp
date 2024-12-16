@@ -4,7 +4,6 @@
 #include <map>
 #include <sstream>
 
-
 using std::ifstream;
 using std::string;
 using std::stringstream;
@@ -12,9 +11,26 @@ using std::vector;
 
 typedef vector<string> t_vecString;
 
+namespace
+{
+	char const *const	SERVER_KEYS[] = {
+		"listen",
+		"server_name",
+		"error_page",
+		NULL,
+	};
+	char const *const	LOCATION_KEYS[] = {
+		"root",
+		"autoindex",
+		NULL,
+	};
+}
+
 namespace Utils
 {
 	t_vecString	split(const string &str, char delim);
+	bool		isValidKeyServer(string const &key);
+	bool		isValidKeyLocation(string const &key);
 };
 
 WebServer::WebServer()
@@ -33,7 +49,7 @@ WebServer::WebServer(const WebServer &src)
 
 WebServer::WebServer(const char fileName[])
 {
-	t_vecString listTokens(readFile(fileName));
+	t_vecString listTokens = readFile(fileName);
 	searchTokens(listTokens);
 }
 
@@ -60,11 +76,10 @@ WebServer::t_vecString WebServer::readFile(const char filename[])
 	infile.exceptions(ifstream::badbit);
 	for (string content; std::getline(infile, content);)
 	{
+		content = content.substr(0, content.find('#'));
 		stringstream stream(content);
 		while (stream >> content)
 		{
-			if (content[0] == '#')
-				break ;
 			t_vecString tokens(Utils::split(content, ';'));
 			for (t_vecString::const_iterator it(tokens.begin()); it != tokens.end(); ++it)
 				listTokens.push_back(*it);
@@ -76,7 +91,6 @@ WebServer::t_vecString WebServer::readFile(const char filename[])
 void WebServer::searchTokens(const t_vecString &tokens)
 {
 	int	sizeTokens;
-
 	
 	std::string const server = "server";
 
@@ -87,9 +101,7 @@ void WebServer::searchTokens(const t_vecString &tokens)
 		if (value == server)
 		{
 			_servers.push_back(Server());
-			// Server serverTemp;
 			parseTokens(it + 1, tokens.end());
-			// break ;
 		}
 	}
 	printKeyValues();
@@ -144,41 +156,45 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 	if (key == "location")	
 	{
 		 while (start != end) 
-	{
-	
-		++start;
-		if (start == end) 
-			break; 
-
-		Location location;
-		std::vector<std::string> locationValues;
-		std::string locationKey = *start;
-		++start;
-		while (start != end && *start != "}") 
 		{
-			if (*start == "{") 
+		
+			++start;
+			if (start == end) 
+				break; 
+
+			Location location;
+			std::vector<std::string> locationValues;
+			std::string locationKey = *start;
+			++start;
+			while (start != end && *start != "}") 
 			{
+				if (*start == "{") 
+				{
+					++start; 
+					continue;
+				}
+				std::string key = *start;
+				locationValues.clear();
+				if (!Utils::isValidKeyLocation(key))
+					throw std::runtime_error("Invalid key found in location block");
 				++start; 
-				continue;
+				while (start != end && *start != ";" && *start != "}") 
+				{
+					locationValues.push_back(*start);
+					++start;
+				}
+				location._pairs.insert(std::make_pair(key, locationValues));
+				if (start != end && *start == ";") 
+					++start;
+				
 			}
-			std::string key = *start;
-			locationValues.clear();
-			++start; 
-			while (start != end && *start != ";" && *start != "}") 
-			{
-				locationValues.push_back(*start);
-				++start;
-			}
-			location._pairs.insert(std::make_pair(key, locationValues));
-			if (start != end && *start == ";") 
-				++start;
-			
-		}
-		server._locations.insert(std::make_pair(locationKey, location));
-    }
+			server._locations.insert(std::make_pair(locationKey, location));
+    	}
 	}
 	else
 	{
+		if (!Utils::isValidKeyServer(key))
+			throw std::runtime_error("Invalid key found server block");
 		for (t_vecString::const_iterator it = start; it != end;)
 		{
 			++it;
@@ -216,9 +232,7 @@ void WebServer::printKeyValues(void)
 					++valIt)
 					std::cout << "  pair value [" << *valIt << "]"<< std::endl;
 			}
-		
-	}
-	
+		}
 	}
 }
 //---Static functions-- -
@@ -227,13 +241,15 @@ t_vecString Utils::split(const string &str, char delim)
 {
 	t_vecString	words;
 
-	std::size_t pos(0);
+	std::size_t pos = 0;
 	while (true)
 	{
 		std::size_t end = str.find(delim, pos);
 		if (end == string::npos)
 			break ;
-		words.push_back(str.substr(pos, end - pos));
+		string	token = str.substr(pos, end - pos);
+		if (!token.empty())
+			words.push_back(token);
 		words.push_back(str.substr(end, 1)); // add the delim
 		pos = end + 1;
 	}
@@ -242,3 +258,22 @@ t_vecString Utils::split(const string &str, char delim)
 	return (words);
 }
 
+bool	Utils::isValidKeyServer(string const &key)
+{
+	for (std::size_t i = 0; SERVER_KEYS[i] != NULL; ++i)
+	{
+		if (key == SERVER_KEYS[i])
+			return true;
+	}
+	return false;
+}
+
+bool	Utils::isValidKeyLocation(string const &key)
+{
+	for (std::size_t i = 0; LOCATION_KEYS[i] != NULL; ++i)
+	{
+		if (key == LOCATION_KEYS[i])
+			return true;
+	}
+	return false;
+}
