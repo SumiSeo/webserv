@@ -53,7 +53,7 @@ int	main(int argc, char **argv)
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
-	status = getaddrinfo("www.example.net", NULL, &hints, &servinfo);
+	status = getaddrinfo("localhost", "8080", &hints, &servinfo);
 	printf("STATUS %d\n",status);
 	if(status!=0)
 	{
@@ -61,6 +61,7 @@ int	main(int argc, char **argv)
     	fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));	
 		return 1;	
 	}
+	
 	if (servinfo != NULL) {
     	printf("Address resolved successfully.\n");
 	}
@@ -85,7 +86,24 @@ int	main(int argc, char **argv)
 		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
         printf("  %s: %s\n", ipver, ipstr);	
 	}
+	int socketFd;
+	socketFd= socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+	//if s is -1, there is an error
+	printf("s %d\n",socketFd);
+	bind(socketFd, servinfo->ai_addr, servinfo->ai_addrlen);
+	listen(socketFd,20);
+	socklen_t addr_size;
+	struct sockaddr_storage their_addr;
+	addr_size = sizeof their_addr;
+	int new_fd = accept(socketFd, (struct sockaddr *) &their_addr, &addr_size);
+	// printf("new fd%d\b",new_fd);
+	(void)new_fd;
+	// const char *msg = "Beej was here!";
+	// int len, bytes_sent;
 
-	freeaddrinfo(servinfo);
+	// len = strlen(msg);
+	// bytes_sent = send(socketFd, msg, len, 0);
+		freeaddrinfo(servinfo);
+
 	return (0);
 }
