@@ -88,22 +88,14 @@ int	main(int argc, char **argv)
 	}
 	int socketFd;
 	socketFd= socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
-	//if s is -1, there is an error
 	printf("s %d\n",socketFd);
 	bind(socketFd, servinfo->ai_addr, servinfo->ai_addrlen);
 	listen(socketFd,20);
 	socklen_t addr_size;
 	struct sockaddr_storage their_addr;
 	addr_size = sizeof their_addr;
-	int new_fd = accept(socketFd, (struct sockaddr *) &their_addr, &addr_size);
-	// printf("new fd%d\b",new_fd);
-	(void)new_fd;
-	// const char *msg = "Beej was here!";
-	// int len, bytes_sent;
-
-	// len = strlen(msg);
-	// bytes_sent = send(socketFd, msg, len, 0);
-		freeaddrinfo(servinfo);
+	accept(socketFd, (struct sockaddr *) &their_addr, &addr_size);
+	freeaddrinfo(servinfo);
 
 	return (0);
 }
