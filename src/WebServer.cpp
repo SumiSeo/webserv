@@ -1,8 +1,9 @@
-#include "WebServer.hpp"
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <sstream>
+
+#include "WebServer.hpp"
 
 using std::ifstream;
 using std::string;
@@ -90,14 +91,11 @@ WebServer::t_vecString WebServer::readFile(const char filename[])
 
 void WebServer::searchTokens(const t_vecString &tokens)
 {
-	int	sizeTokens;
-	
-	std::string const server = "server";
+	string const server = "server";
 
-	sizeTokens = tokens.size();
 	for (t_vecString::const_iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
-		std::string value = *it;
+		string value = *it;
 		if (value == server)
 		{
 			_servers.push_back(Server());
@@ -149,11 +147,9 @@ void WebServer::parseTokens(t_vecString::const_iterator start,
 void WebServer::tokenToMap(t_vecString::const_iterator start,
 	t_vecString::const_iterator end)
 {
-	std::string key = *start;
-	std::vector<string> names;
 	Server &server = _servers.back();
 
-	if (key == "location")	
+	if (*start == "location")	
 	{
 		 while (start != end) 
 		{
@@ -163,8 +159,8 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 				break; 
 
 			Location location;
-			std::vector<std::string> locationValues;
-			std::string locationKey = *start;
+			t_vecString locationValues;
+			string locationKey = *start;
 			++start;
 			while (start != end && *start != "}") 
 			{
@@ -173,7 +169,7 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 					++start; 
 					continue;
 				}
-				std::string key = *start;
+				string key = *start;
 				locationValues.clear();
 				if (!Utils::isValidKeyLocation(key))
 					throw std::runtime_error("Invalid key found in location block");
@@ -193,41 +189,42 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 	}
 	else
 	{
-		if (!Utils::isValidKeyServer(key))
+		if (!Utils::isValidKeyServer(*start))
 			throw std::runtime_error("Invalid key found server block");
+		t_vecString values;
 		for (t_vecString::const_iterator it = start; it != end;)
 		{
 			++it;
 			if (it != end)
-				names.push_back(*it);
+				values.push_back(*it);
 		}
-		server._configs.insert(std::make_pair(key, names));
-	}	
+		server._configs.insert(std::make_pair(*start, values));
+	}
 }
 
 void WebServer::printKeyValues(void)
 {
 
-	for(std::vector<Server>::const_iterator serverIt = _servers.begin(); serverIt != _servers.end(); serverIt++)
+	for(vector<Server>::const_iterator serverIt = _servers.begin(); serverIt != _servers.end(); serverIt++)
 	{
 		std::cout << "Server" << std::endl;
-		for(std::map<std::string, std::vector<std::string> >::const_iterator it = serverIt->_configs.begin(); it!=serverIt->_configs.end(); it++)
+		for(std::map<string, vector<string> >::const_iterator it = serverIt->_configs.begin(); it!=serverIt->_configs.end(); it++)
 		{
 			std::cout << "key [" << it->first << "]" <<std::endl;
-			for (std::vector<std::string>::const_iterator valIt = it->second.begin(); valIt != it->second.end(); ++valIt)
+			for (vector<string>::const_iterator valIt = it->second.begin(); valIt != it->second.end(); ++valIt)
 				std::cout << "  value [" << *valIt << "]"<< std::endl;
 		}	
 
-		for (std::map<std::string, Location>::const_iterator it = serverIt->_locations.begin(); it != serverIt->_locations.end(); ++it) 
+		for (std::map<string, Location>::const_iterator it = serverIt->_locations.begin(); it != serverIt->_locations.end(); ++it) 
 		{
 			std::cout << "Location : key [" << it->first << "]" << std::endl;
 			const Location& loc = it->second;
-			for (std::map<std::string, std::vector<std::string> >::const_iterator pairIt = loc._pairs.begin(); 
+			for (std::map<string, vector<string> >::const_iterator pairIt = loc._pairs.begin(); 
 				pairIt != loc._pairs.end(); 
 				++pairIt) 
 			{
 				std::cout << "  pair key [" << pairIt->first << "]"<< std::endl;
-				for (std::vector<std::string>::const_iterator valIt = pairIt->second.begin(); 
+				for (vector<string>::const_iterator valIt = pairIt->second.begin(); 
 					valIt != pairIt->second.end(); 
 					++valIt)
 					std::cout << "  pair value [" << *valIt << "]"<< std::endl;
