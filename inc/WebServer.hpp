@@ -8,12 +8,11 @@
 class WebServer
 {
   public:
-	WebServer();
-	WebServer(const WebServer &src);
-	WebServer(const char fileName[]);
+	WebServer(WebServer const &src);
+	WebServer(char const fileName[]);
 	~WebServer();
 
-	WebServer &operator=(const WebServer &original);
+	WebServer &operator=(WebServer const &original);
 
   protected:
 	/* data */
@@ -21,10 +20,11 @@ class WebServer
 	typedef std::vector<std::string> t_vecString;
 	std::vector<Server> _servers;
 
-	t_vecString readFile(const char fileName[]);
+	WebServer();
+	t_vecString readFile(char const fileName[]);
 	void parseTokens(t_vecString::const_iterator start,
 		t_vecString::const_iterator end);
-	void searchTokens(const t_vecString &tokens);
+	void searchTokens(t_vecString const &tokens);
 	void tokenToMap(t_vecString::const_iterator start,
 		t_vecString::const_iterator end);
 	void LocationToMap(t_vecString::const_iterator start,
@@ -32,7 +32,7 @@ class WebServer
 
 
 	//debugging functions
-	void printKeyValues(void);
+	void printKeyValues();
 };
 
 #endif
