@@ -305,7 +305,7 @@ void WebServer::loop(int socketFd)
 				int clientFd = accept(socketFd, (struct sockaddr *)&clientAddress, &clientAddressLength);
 				if(clientFd == -1)
 				{
-					std::cerr<<"Failed to accept client connection" <<std::endl;
+					perror("accept");
 					continue;
 				}
 				//Add client socket to epoll
@@ -313,19 +313,19 @@ void WebServer::loop(int socketFd)
 				event.data.fd = clientFd;
 				if(epoll_ctl(epollFd, EPOLL_CTL_ADD,clientFd, &event) == -1)
 				{
-					std::cerr << "Failed to add client socket to epoll instance." << std::endl;
+					perror("epoll_ctl");
+					// std::cerr << "Failed to add client socket to epoll instance." << std::endl;
 					close(clientFd);
 					continue;
 				}
 				handleClient(clientFd);
 			}
 			else
-				{
-					int clientFd = events[i].data.fd;
-					handleClient(clientFd);
-				}
+			{
+				int clientFd = events[i].data.fd;
+				handleClient(clientFd);
+			}
 		}
-		
 	}
 	close(socketFd);
     close(epollFd);
