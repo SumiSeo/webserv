@@ -53,6 +53,7 @@ class WebServer
 
 	/* Members */
 	std::vector<Server> _servers;
+	std::vector<int> _socketFds;
 
 	/* Methods */
 	WebServer();

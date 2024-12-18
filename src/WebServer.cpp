@@ -25,6 +25,7 @@ namespace
 		"autoindex",
 		NULL,
 	};
+	char const *const DEFAULT_PORT = "8080";
 }
 
 namespace Utils
@@ -33,6 +34,8 @@ namespace Utils
 	t_vecString split(string const &str, char delim);
 	bool isValidKeyServer(string const &key);
 	bool isValidKeyLocation(string const &key);
+	string getListenAddress(string const &listenKey);
+	string getListenPort(string const &listenKey);
 };
 
 // --- Public --- //
@@ -332,45 +335,59 @@ int WebServer::createServer(void)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	rv = getaddrinfo(NULL,PORT, &hints, &servinfo);
-	if(rv!=0)
+	for (vector<Server>::const_iterator it = _servers.begin(); it != _servers.end(); it++)
 	{
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        return 1;
-	}
-	for(p = servinfo; p !=NULL; p= p->ai_next)
-	{
-		socketFd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-		if(socketFd == -1)
+		char *const address = NULL;
+		char *const port = DEFAULT_PORT;
+		string listenAddress;
+		string listenPort;
+		if (it->_configs.find("listen") != it->_configs.end())
 		{
-			perror("server: socket");
-			continue;
+			listenAddress = Utils::getListenAddress(it->_configs["listen"]);
+			listenPort = Utils::getListenPort(it->_configs["listen"]);
+			if (listenAddress.empty() || listenPort.empty())
+				throw std::runtime_error("Invalid listen values");
+			address = listenAddress.c_str();
+			port = listenPort.c_str();
 		}
-		if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
+		rv = getaddrinfo(address, port, &hints, &servinfo);
+
+		if(rv!=0)
+			throw std::runtime_error(gai_strerror(rv));
+
+		for(p = servinfo; p !=NULL; p= p->ai_next)
 		{
-			perror("setsockopt");
-			exit(1);
+			socketFd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+
+			if(socketFd == -1)
+				continue;
+
+			if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(int)) == -1)
+			{
+				close(socketFD);
+				continue;
+			}
+			if(bind(socketFd, p->ai_addr, p->ai_addrlen) == -1)
+			{
+				close(socketFd);
+				continue;
+			}
+			break;
 		}
-		if(bind(socketFd, p->ai_addr, p->ai_addrlen) == -1)
+		freeaddrinfo(servinfo);
+		if(p == NULL)
 		{
-			close(socketFd);
-			perror("server: bind");
-			continue;
+			std::cerr << "server : failed to bind" << std::endl;
+			return 1;
 		}
-		break;
+		if(listen(socketFd, 10) == -1)
+		{
+			perror("listen");
+			return 1;
+		}
+		_socketFds.push_back(socketFd);
 	}
-	freeaddrinfo(servinfo);
-	if(p == NULL)
-	{
-		fprintf(stderr, "server : failed to bind");
-		exit(1);
-	}
-	if(listen(socketFd, 10) == -1)
-	{
-		perror("listen");
-		exit(1);
-	}
-	loop(socketFd);
+	//loop(socketFd);
 	return 0;
 }
 
@@ -422,4 +439,20 @@ void Utils::sigchld_handler(int s)
 	int saved_errno = errno;
 	while(waitpid(-1,NULL,WNOHANG) > 0);
 	errno = saved_errno;
+}
+
+string Utils::getListenAddress(string const &listenKey)
+{
+	std::size_t pos = listenKey.find(':');
+	if (pos == string::npos)
+		return string();
+	return listen.substr(0, pos);
+}
+
+string Utils::getListenPort(string const &listenKey)
+{
+	std::size_t pos = listenKey.find(':');
+	if (pos == string::npos)
+		return string();
+	return listenKey.substr(pos + 1);
 }
