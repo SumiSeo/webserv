@@ -4,6 +4,23 @@
 # include <string>
 # include <vector>
 # include "Server.hpp"
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <stdio.h>
+
+
+#define BUF_SIZE 500
+#define PORT "8080"
+
 
 class WebServer
 {
@@ -29,10 +46,15 @@ class WebServer
 		t_vecString::const_iterator end);
 	void LocationToMap(t_vecString::const_iterator start,
 		t_vecString::const_iterator end);
-
+	void *get_in_addr(struct sockaddr *sa);
+	int createServer(void);
 
 	//debugging functions
 	void printKeyValues(void);
+
+	//static functions
+	static void sigchld_handler(int s);
+
 };
 
 #endif
