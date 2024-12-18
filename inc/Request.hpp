@@ -7,6 +7,7 @@
 class Request
 {
   public:
+	/* New Variable Types */
 	enum e_IOReturn
 	{
 		IO_ERROR,
@@ -23,34 +24,40 @@ class Request
 		PHASE_ERROR,
 	};
 
+	/* Methods */
 	Request(Request const &src);
 	Request(int fd);
 	~Request();
 
 	Request	&operator=(Request const &rhs);
 
+	// -- Main Functions -- //
 	e_IOReturn retrieve();
 	e_phase parse();
 
   protected:
 
   private:
-	struct s_startLine
+	/* Typedefs */
+	typedef std::map<std::string, std::string> t_mapString;
+
+	/* New Variable Types */
+	struct StartLine
 	{
 		std::string method;
 		std::string requestTarget;
 		std::string httpVersion;
 	};
 
-	typedef std::map<std::string, std::string> t_mapString;
-
+	/* Members */
 	int _fd;
 	e_phase _phase;
 	std::string _buffer;
-	s_startLine _startLine;
+	StartLine _startLine;
 	t_mapString _headers;
 	std::string _body;
 
+	/* Methods */
 	Request();
 };
 
