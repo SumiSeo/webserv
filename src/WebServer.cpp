@@ -14,13 +14,13 @@ typedef vector<string> t_vecString;
 
 namespace
 {
-	char const *const	SERVER_KEYS[] = {
+	char const *const SERVER_KEYS[] = {
 		"listen",
 		"server_name",
 		"error_page",
 		NULL,
 	};
-	char const *const	LOCATION_KEYS[] = {
+	char const *const LOCATION_KEYS[] = {
 		"root",
 		"autoindex",
 		NULL,
@@ -29,28 +29,19 @@ namespace
 
 namespace Utils
 {
-	t_vecString	split(const string &str, char delim);
-	bool		isValidKeyServer(string const &key);
-	bool		isValidKeyLocation(string const &key);
 	void sigchld_handler(int s);
-
+	t_vecString split(string const &str, char delim);
+	bool isValidKeyServer(string const &key);
+	bool isValidKeyLocation(string const &key);
 };
 
-WebServer::WebServer()
+// --- Public --- //
+WebServer::WebServer(WebServer const &src):
+	_servers(src._servers)
 {
-	Server server;
-
 }
 
-WebServer::WebServer(const WebServer &src)
-{
-	if (this != &src)
-	{
-		*this = src;
-	}
-}
-
-WebServer::WebServer(const char fileName[])
+WebServer::WebServer(char const fileName[])
 {
 	t_vecString listTokens = readFile(fileName);
 	searchTokens(listTokens);
@@ -62,20 +53,20 @@ WebServer::~WebServer()
 {
 }
 
-WebServer &WebServer::operator=(const WebServer &rhs)
+WebServer &WebServer::operator=(WebServer const &rhs)
 {
-	if (this != &rhs)
-	{
-		*this = rhs;
-	}
-	return (*this);
+	_servers = rhs._servers;
+	return *this;
 }
 
-// --- Private methods ---
-
-WebServer::t_vecString WebServer::readFile(const char filename[])
+// --- Private ---
+WebServer::WebServer()
 {
-	t_vecString	listTokens;
+}
+
+WebServer::t_vecString WebServer::readFile(char const filename[])
+{
+	t_vecString listTokens;
 
 	ifstream infile(filename);
 	infile.exceptions(ifstream::badbit);
@@ -93,7 +84,7 @@ WebServer::t_vecString WebServer::readFile(const char filename[])
 	return (listTokens);
 }
 
-void WebServer::searchTokens(const t_vecString &tokens)
+void WebServer::searchTokens(t_vecString const &tokens)
 {
 	string const server = "server";
 
@@ -143,9 +134,8 @@ void WebServer::parseTokens(t_vecString::const_iterator start,
 				it++;
 		}
 		if (it == end)
-			break ;
+			break;
 	}
-
 }
 
 void WebServer::tokenToMap(t_vecString::const_iterator start,
@@ -175,8 +165,10 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 				}
 				string key = *start;
 				locationValues.clear();
+
 				if (!Utils::isValidKeyLocation(key))
 					throw std::runtime_error("Invalid key found in location block");
+
 				++start; 
 				while (start != end && *start != ";" && *start != "}") 
 				{
@@ -206,10 +198,9 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 	}
 }
 
-void WebServer::printKeyValues(void)
+void WebServer::printKeyValues()
 {
-
-	for(vector<Server>::const_iterator serverIt = _servers.begin(); serverIt != _servers.end(); serverIt++)
+	for(std::vector<Server>::const_iterator serverIt = _servers.begin(); serverIt != _servers.end(); serverIt++)
 	{
 		std::cout << "Server" << std::endl;
 		for(std::map<string, vector<string> >::const_iterator it = serverIt->_configs.begin(); it!=serverIt->_configs.end(); it++)
@@ -383,10 +374,8 @@ int WebServer::createServer(void)
 	return 0;
 }
 
-
 //////////** ---Static functions-- **///////////
-
-t_vecString Utils::split(const string &str, char delim)
+t_vecString Utils::split(string const &str, char delim)
 {
 	t_vecString	words;
 
@@ -404,10 +393,10 @@ t_vecString Utils::split(const string &str, char delim)
 	}
 	if (pos < str.size())
 		words.push_back(str.substr(pos));
-	return (words);
+	return words;
 }
 
-bool	Utils::isValidKeyServer(string const &key)
+bool Utils::isValidKeyServer(string const &key)
 {
 	for (std::size_t i = 0; SERVER_KEYS[i] != NULL; ++i)
 	{
@@ -417,7 +406,7 @@ bool	Utils::isValidKeyServer(string const &key)
 	return false;
 }
 
-bool	Utils::isValidKeyLocation(string const &key)
+bool Utils::isValidKeyLocation(string const &key)
 {
 	for (std::size_t i = 0; LOCATION_KEYS[i] != NULL; ++i)
 	{
