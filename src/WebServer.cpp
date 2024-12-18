@@ -241,22 +241,66 @@ void *WebServer::get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+void WebServer::acceptRequest(struct sigaction sa, int socketFd)
+{
+	socklen_t sin_size;
+	char s[INET6_ADDRSTRLEN];
+	int newFd;
+
+
+    struct sockaddr_storage their_addr; 
+
+	sa.sa_handler = sigchld_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+	if(sigaction(SIGCHLD, &sa, NULL) == -1)
+	{
+		perror("sigactioin");
+		exit(1);
+	}
+	printf("server: waiting for connections...\n");
+	while(1)
+	{
+		sin_size = sizeof their_addr;
+		newFd = accept(socketFd, (struct sockaddr *)&their_addr, &sin_size);
+		if(newFd == -1)
+		{
+			perror("accept problem");
+			continue;
+		}
+
+		inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr),s, sizeof s);
+		
+		printf("server : got connection from %s \n", s);
+		char buffer[1024];
+
+		ssize_t bytes_received = recv(newFd, buffer, sizeof(buffer), 0);
+		if (bytes_received < 0) 
+			std::cerr << "Error in recv: " << strerror(errno) << std::endl;
+		else if (bytes_received == 0)
+			std::cout << "Connection closed by peer" << std::endl;
+		else 
+		{
+			std::cout << "Received " << bytes_received << " bytes" << std::endl;
+			std::cout << "Data: " << std::string(buffer, bytes_received) << std::endl;
+		}
+
+
+		close(newFd);
+	}
+}
 int WebServer::createServer(void)
 {
 	int socketFd;
-	int newFd;
 	struct addrinfo hints, *servinfo, *p;
-    struct sockaddr_storage their_addr; 
-	socklen_t sin_size;
 	struct sigaction sa;
 	int yes = 1;
-	char s[INET6_ADDRSTRLEN];
 	int rv;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE; //use my IP address
+	hints.ai_flags = AI_PASSIVE;
 
 	rv = getaddrinfo(NULL,PORT, &hints, &servinfo);
 	if(rv!=0)
@@ -265,8 +309,8 @@ int WebServer::createServer(void)
         return 1;
 	}
 
-	for(p = servinfo; p !=NULL; p= p->ai_next
-	){
+	for(p = servinfo; p !=NULL; p= p->ai_next)
+	{
 		socketFd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 		if(socketFd == -1)
 		{
@@ -297,42 +341,8 @@ int WebServer::createServer(void)
 		perror("listen");
 		exit(1);
 	}
-
-	sa.sa_handler = sigchld_handler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if(sigaction(SIGCHLD, &sa, NULL) == -1)
-	{
-		perror("sigactioin");
-		exit(1);
-	}
-	printf("server: waiting for connections...\n");
-	while(1)
-	{
-		sin_size = sizeof their_addr;
-		newFd = accept(socketFd, (struct sockaddr *)&their_addr, &sin_size);
-		if(newFd == -1)
-		{
-			perror("accept problem");
-			continue;
-		}
-
-		inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr),s, sizeof s);
-		printf("server : got connection from %s \n", s);
-		char buffer[1024];
-
-		ssize_t bytes_received = recv(newFd, buffer, sizeof(buffer), 0);
-		if (bytes_received < 0) 
-			std::cerr << "Error in recv: " << strerror(errno) << std::endl;
-		else if (bytes_received == 0)
-			std::cout << "Connection closed by peer" << std::endl;
-		else 
-		{
-			std::cout << "Received " << bytes_received << " bytes" << std::endl;
-			std::cout << "Data: " << std::string(buffer, bytes_received) << std::endl;
-		}
-			close(newFd);
-	}
+	acceptRequest(sa, socketFd);
+	
 	return 0;
 }
 //---Static functions-- -
@@ -380,7 +390,7 @@ bool	Utils::isValidKeyLocation(string const &key)
 
 
 // static function
-static void WebServer::sigchld_handler(int s)
+void WebServer::sigchld_handler(int s)
 {
 	(void)s;
 	int saved_errno = errno;

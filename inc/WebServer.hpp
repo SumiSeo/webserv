@@ -48,6 +48,8 @@ class WebServer
 		t_vecString::const_iterator end);
 	void *get_in_addr(struct sockaddr *sa);
 	int createServer(void);
+	void acceptRequest(struct sigaction sa, int socketFd);
+
 
 	//debugging functions
 	void printKeyValues(void);
