@@ -53,6 +53,7 @@ WebServer::WebServer(const char fileName[])
 	t_vecString listTokens = readFile(fileName);
 	searchTokens(listTokens);
 	createServer();
+
 }
 
 WebServer::~WebServer()
@@ -234,66 +235,105 @@ void WebServer::printKeyValues(void)
 	}
 }
 
-void *WebServer::get_in_addr(struct sockaddr *sa)
+void *get_in_addr(struct sockaddr *sa)
 {
 	if(sa->sa_family == AF_INET)
 		return &(((struct sockaddr_in *)sa)->sin_addr);
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
-
-void WebServer::acceptRequest(struct sigaction sa, int socketFd)
+void handleClient(int clientFd) 
 {
-	socklen_t sin_size;
-	char s[INET6_ADDRSTRLEN];
-	int newFd;
+	// char s[INET6_ADDRSTRLEN];
+	// struct sockaddr_storage their_addr; 
+	// inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
 
-
-    struct sockaddr_storage their_addr; 
-
-	sa.sa_handler = sigchld_handler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if(sigaction(SIGCHLD, &sa, NULL) == -1)
+	// printf("server : got connection from %s \n", s);
+	char buffer[1024];
+	
+	ssize_t bytes_received = recv(clientFd, buffer, sizeof(buffer), 0);
+	if (bytes_received < 0) 
+		std::cerr << "Error in recv: " << strerror(errno) << std::endl;
+	else if (bytes_received == 0)
+		std::cout << "Connection closed by peer" << std::endl;
+	else 
 	{
-		perror("sigactioin");
-		exit(1);
+		std::cout << "Received " << bytes_received << " bytes" << std::endl;
+		std::cout << "Data: " << std::string(buffer, bytes_received) << std::endl;
 	}
+}
+
+void WebServer::loop(int socketFd)
+{
 	printf("server: waiting for connections...\n");
-	while(1)
+	int epollFd;
+	struct epoll_event event, events[MAX_EVENTS];
+	epollFd = epoll_create1(0);
+	
+	if(epollFd == -1)
 	{
-		sin_size = sizeof their_addr;
-		newFd = accept(socketFd, (struct sockaddr *)&their_addr, &sin_size);
-		if(newFd == -1)
-		{
-			perror("accept problem");
-			continue;
-		}
-
-		inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr),s, sizeof s);
-		
-		printf("server : got connection from %s \n", s);
-		char buffer[1024];
-
-		ssize_t bytes_received = recv(newFd, buffer, sizeof(buffer), 0);
-		if (bytes_received < 0) 
-			std::cerr << "Error in recv: " << strerror(errno) << std::endl;
-		else if (bytes_received == 0)
-			std::cout << "Connection closed by peer" << std::endl;
-		else 
-		{
-			std::cout << "Received " << bytes_received << " bytes" << std::endl;
-			std::cout << "Data: " << std::string(buffer, bytes_received) << std::endl;
-		}
-
-
-		close(newFd);
+		std::cout<<"Failed to create an epoll instance"<<std::endl;
+		close(socketFd);
 	}
+
+	event.events = EPOLLIN;
+	event.data.fd = socketFd;
+	if(epoll_ctl(epollFd, EPOLL_CTL_ADD, socketFd, &event) == -1)
+	{
+		std::cerr<<"Failed to add socket to epoll instance "<<std::endl;
+		close(socketFd);
+		close(epollFd);
+		return;
+	}
+
+	std::cout<<"Server started listening on port : " << PORT << std::endl;
+	while(true)
+	{
+		int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
+		if(numEvents == -1)
+		{
+			std::cerr << "Failed to wait for events: " << strerror(errno) << std::endl;
+			std::cerr<<"Failed to wait for events"<<std::endl;
+			break;
+		}
+
+		for(int i = 0; i < numEvents; ++i)
+		{
+			if(events[i].data.fd == socketFd)
+			{
+				struct sockaddr_in clientAddress;
+				socklen_t clientAddressLength = sizeof(clientAddress);
+				int clientFd = accept(socketFd, (struct sockaddr *)&clientAddress, &clientAddressLength);
+				if(clientFd == -1)
+				{
+					std::cerr<<"Failed to accept client connection" <<std::endl;
+					continue;
+				}
+				//Add client socket to epoll
+				event.events = EPOLLIN;
+				event.data.fd = clientFd;
+				if(epoll_ctl(epollFd, EPOLL_CTL_ADD,clientFd, &event) == -1)
+				{
+					std::cerr << "Failed to add client socket to epoll instance." << std::endl;
+					close(clientFd);
+					continue;
+				}
+				handleClient(clientFd);
+			}
+			else
+				{
+					int clientFd = events[i].data.fd;
+					handleClient(clientFd);
+				}
+		}
+		
+	}
+	close(socketFd);
+    close(epollFd);
 }
 int WebServer::createServer(void)
 {
 	int socketFd;
 	struct addrinfo hints, *servinfo, *p;
-	struct sigaction sa;
 	int yes = 1;
 	int rv;
 
@@ -341,10 +381,10 @@ int WebServer::createServer(void)
 		perror("listen");
 		exit(1);
 	}
-	acceptRequest(sa, socketFd);
-	
+	loop(socketFd);
 	return 0;
 }
+
 //---Static functions-- -
 
 t_vecString Utils::split(const string &str, char delim)
