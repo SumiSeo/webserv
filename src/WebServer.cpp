@@ -52,8 +52,7 @@ WebServer::~WebServer()
 
 WebServer &WebServer::operator=(WebServer const &rhs)
 {
-	if (this != &rhs)
-		_servers = rhs._servers;
+	_servers = rhs._servers;
 	return *this;
 }
 
@@ -168,8 +167,10 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 				}
 				std::string key = *start;
 				locationValues.clear();
+
 				if (!Utils::isValidKeyLocation(key))
 					throw std::runtime_error("Invalid key found in location block");
+
 				++start; 
 				while (start != end && *start != ";" && *start != "}") 
 				{
@@ -188,6 +189,7 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 	{
 		if (!Utils::isValidKeyServer(key))
 			throw std::runtime_error("Invalid key found server block");
+
 		for (t_vecString::const_iterator it = start; it != end;)
 		{
 			++it;
