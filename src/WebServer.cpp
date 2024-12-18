@@ -32,6 +32,8 @@ namespace Utils
 	t_vecString	split(const string &str, char delim);
 	bool		isValidKeyServer(string const &key);
 	bool		isValidKeyLocation(string const &key);
+	void sigchld_handler(int s);
+
 };
 
 WebServer::WebServer()
@@ -241,6 +243,7 @@ void *get_in_addr(struct sockaddr *sa)
 		return &(((struct sockaddr_in *)sa)->sin_addr);
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
+
 void handleClient(int clientFd) 
 {
 	// char s[INET6_ADDRSTRLEN];
@@ -268,7 +271,6 @@ void WebServer::loop(int socketFd)
 	int epollFd;
 	struct epoll_event event, events[MAX_EVENTS];
 	epollFd = epoll_create1(0);
-	
 	if(epollFd == -1)
 	{
 		std::cout<<"Failed to create an epoll instance"<<std::endl;
@@ -292,10 +294,8 @@ void WebServer::loop(int socketFd)
 		if(numEvents == -1)
 		{
 			std::cerr << "Failed to wait for events: " << strerror(errno) << std::endl;
-			std::cerr<<"Failed to wait for events"<<std::endl;
 			break;
 		}
-
 		for(int i = 0; i < numEvents; ++i)
 		{
 			if(events[i].data.fd == socketFd)
@@ -308,13 +308,11 @@ void WebServer::loop(int socketFd)
 					perror("accept");
 					continue;
 				}
-				//Add client socket to epoll
 				event.events = EPOLLIN;
 				event.data.fd = clientFd;
 				if(epoll_ctl(epollFd, EPOLL_CTL_ADD,clientFd, &event) == -1)
 				{
 					perror("epoll_ctl");
-					// std::cerr << "Failed to add client socket to epoll instance." << std::endl;
 					close(clientFd);
 					continue;
 				}
@@ -330,6 +328,7 @@ void WebServer::loop(int socketFd)
 	close(socketFd);
     close(epollFd);
 }
+
 int WebServer::createServer(void)
 {
 	int socketFd;
@@ -348,7 +347,6 @@ int WebServer::createServer(void)
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         return 1;
 	}
-
 	for(p = servinfo; p !=NULL; p= p->ai_next)
 	{
 		socketFd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
@@ -385,7 +383,8 @@ int WebServer::createServer(void)
 	return 0;
 }
 
-//---Static functions-- -
+
+//////////** ---Static functions-- **///////////
 
 t_vecString Utils::split(const string &str, char delim)
 {
@@ -428,9 +427,7 @@ bool	Utils::isValidKeyLocation(string const &key)
 	return false;
 }
 
-
-// static function
-void WebServer::sigchld_handler(int s)
+void Utils::sigchld_handler(int s)
 {
 	(void)s;
 	int saved_errno = errno;

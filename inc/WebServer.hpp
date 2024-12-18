@@ -50,11 +50,10 @@ class WebServer
 	static void *get_in_addr(struct sockaddr *sa);
 	int createServer(void);
 	void loop(int socketFd);
+
 	//debugging functions
 	void printKeyValues(void);
 
-	//static functions
-	static void sigchld_handler(int s);
 
 };
 
