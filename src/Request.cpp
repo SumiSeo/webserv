@@ -39,6 +39,18 @@ Request::e_IOReturn Request::retrieve()
 
 Request::e_phase Request::parse()
 {
+	if (_phase == PHASE_EMPTY)
+	{
+	}
+	if (_phase == PHASE_START_LINE)
+	{
+	}
+	if (_phase == PHASE_HEADERS)
+	{
+	}
+	if (_phase == PHASE_BODY)
+	{
+	}
 	return _phase;
 }
 
