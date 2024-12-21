@@ -25,6 +25,7 @@ class Request
 	};
 
 	/* Methods */
+	Request();
 	Request(Request const &src);
 	Request(int fd);
 	~Request();
@@ -57,8 +58,6 @@ class Request
 	t_mapString _headers;
 	std::string _body;
 
-	/* Methods */
-	Request();
 };
 
 #endif

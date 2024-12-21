@@ -2,8 +2,11 @@
 # define __SERVER_HPP__
 
 # include <map>
+# include <set>
 # include <string>
 # include <vector>
+
+# include "Request.hpp"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -20,19 +23,14 @@
 #include <sys/epoll.h>
 
 #define BUF_SIZE 500
-#define PORT "8080"
-#define MAX_EVENTS 100
 #define MAX_CLIENTS 10
 
 class WebServer
 {
   public:
 	/* Members */
-	WebServer(WebServer const &src);
 	WebServer(char const fileName[]);
 	~WebServer();
-
-	WebServer &operator=(WebServer const &original);
 
   protected:
 	/* data */
@@ -53,10 +51,15 @@ class WebServer
 
 	/* Members */
 	std::vector<Server> _servers;
-	std::vector<int> _socketFds;
+	std::set<int> _socketFds;
+	int _epollFd;
+	std::map<int, Request> _requests;
 
 	/* Methods */
 	WebServer();
+	WebServer(WebServer const &src);
+
+	WebServer &operator=(WebServer const &original);
 
 	// -- Main functions -- //
 	t_vecString readFile(char const fileName[]);
@@ -70,8 +73,8 @@ class WebServer
 	void LocationToMap(t_vecString::const_iterator start,
 		t_vecString::const_iterator end);
 	static void *get_in_addr(struct sockaddr *sa);
-	int createServer(void);
-	void loop(int socketFd);
+	int createServer();
+	void loop();
 
 	// -- debugging functions -- //
 	void printKeyValues();

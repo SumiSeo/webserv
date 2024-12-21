@@ -1,6 +1,11 @@
 #include "Request.hpp"
 
 // --- Public --- //
+Request::Request():
+	_fd(-1)
+{
+}
+
 Request::Request(Request const &src):
 	_fd(src._fd),
 	_phase(src._phase),
@@ -52,9 +57,4 @@ Request::e_phase Request::parse()
 	{
 	}
 	return _phase;
-}
-
-// --- Private --- //
-Request::Request()
-{
 }

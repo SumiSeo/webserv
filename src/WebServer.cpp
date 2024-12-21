@@ -1,3 +1,7 @@
+#include <algorithm>
+#include <cerrno>
+#include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -5,7 +9,11 @@
 
 #include "WebServer.hpp"
 
+using std::cerr;
+using std::endl;
 using std::ifstream;
+using std::map;
+using std::set;
 using std::string;
 using std::stringstream;
 using std::vector;
@@ -26,6 +34,7 @@ namespace
 		NULL,
 	};
 	char const *const DEFAULT_PORT = "8080";
+	std::size_t const MAX_EVENTS = 512;
 }
 
 namespace Utils
@@ -34,37 +43,41 @@ namespace Utils
 	t_vecString split(string const &str, char delim);
 	bool isValidKeyServer(string const &key);
 	bool isValidKeyLocation(string const &key);
-	string getListenAddress(string const &listenKey);
-	string getListenPort(string const &listenKey);
+	string getListenAddress(t_vecString const &listenValue);
+	string getListenPort(t_vecString const &listenValue);
 };
 
 // --- Public --- //
-WebServer::WebServer(WebServer const &src):
-	_servers(src._servers)
-{
-}
-
-WebServer::WebServer(char const fileName[])
+WebServer::WebServer(char const fileName[]):
+	_epollFd(-1)
 {
 	t_vecString listTokens = readFile(fileName);
 	searchTokens(listTokens);
 	createServer();
-
 }
 
 WebServer::~WebServer()
 {
+	std::for_each(_socketFds.begin(), _socketFds.end(), &close);
+	if (_epollFd != -1)
+		close(_epollFd);
+	for (map<int, Request>::const_iterator it = _requests.begin(); it != _requests.end(); ++it)
+		close(it->first);
 }
 
-WebServer &WebServer::operator=(WebServer const &rhs)
-{
-	_servers = rhs._servers;
-	return *this;
-}
-
-// --- Private ---
+// --- Private --- //
 WebServer::WebServer()
 {
+}
+
+WebServer::WebServer(WebServer const &):
+	_epollFd(-1)
+{
+}
+
+WebServer &WebServer::operator=(WebServer const &)
+{
+	return *this;
 }
 
 WebServer::t_vecString WebServer::readFile(char const filename[])
@@ -259,71 +272,120 @@ void handleClient(int clientFd)
 	}
 }
 
-void WebServer::loop(int socketFd)
+void WebServer::loop()
 {
 	printf("server: waiting for connections...\n");
-	int epollFd;
 	struct epoll_event event, events[MAX_EVENTS];
-	epollFd = epoll_create1(0);
-	if(epollFd == -1)
+	_epollFd = epoll_create1(0);
+	if(_epollFd == -1)
 	{
-		std::cout<<"Failed to create an epoll instance"<<std::endl;
-		close(socketFd);
-	}
-
-	event.events = EPOLLIN;
-	event.data.fd = socketFd;
-	if(epoll_ctl(epollFd, EPOLL_CTL_ADD, socketFd, &event) == -1)
-	{
-		std::cerr<<"Failed to add socket to epoll instance "<<std::endl;
-		close(socketFd);
-		close(epollFd);
+		std::perror("epoll_create1");
 		return;
 	}
 
-	std::cout<<"Server started listening on port : " << PORT << std::endl;
+	std::memset(&event, 0, sizeof(event));
+	event.events = EPOLLIN;
+	for (set<int>::const_iterator it = _socketFds.begin(); it != _socketFds.end(); ++it)
+	{
+		event.data.fd = *it;
+		if(epoll_ctl(_epollFd, EPOLL_CTL_ADD, *it, &event) == -1)
+		{
+			std::perror("epoll_ctl(EPOLL_CTL_ADD)");
+			return;
+		}
+	}
+
 	while(true)
 	{
-		int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
+		int numEvents = epoll_wait(_epollFd, events, MAX_EVENTS, -1);
 		if(numEvents == -1)
 		{
-			std::cerr << "Failed to wait for events: " << strerror(errno) << std::endl;
+			std::perror("epoll_wait");
 			break;
 		}
 		for(int i = 0; i < numEvents; ++i)
 		{
-			if(events[i].data.fd == socketFd)
+			int fd = events[i].data.fd;
+			bool shouldDisconnect = false;
+			if (events[i].events & EPOLLERR)
 			{
-				struct sockaddr_in clientAddress;
-				socklen_t clientAddressLength = sizeof(clientAddress);
-				int clientFd = accept(socketFd, (struct sockaddr *)&clientAddress, &clientAddressLength);
-				if(clientFd == -1)
-				{
-					perror("accept");
-					continue;
-				}
-				event.events = EPOLLIN;
-				event.data.fd = clientFd;
-				if(epoll_ctl(epollFd, EPOLL_CTL_ADD,clientFd, &event) == -1)
-				{
-					perror("epoll_ctl");
-					close(clientFd);
-					continue;
-				}
-				handleClient(clientFd);
+				cerr << "Error event occured on a fd" << endl;
+				if (_socketFds.find(fd) != _socketFds.end())
+					_socketFds.erase(fd);
+				else
+					_requests.erase(fd);
+				if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
+					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
+				close(fd);
+				continue;
 			}
-			else
+			if (events[i].events & EPOLLHUP)
 			{
-				int clientFd = events[i].data.fd;
-				handleClient(clientFd);
+				if (_socketFds.find(fd) != _socketFds.end())
+					_socketFds.erase(fd);
+				else
+					_requests.erase(fd);
+				if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
+					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
+				close(fd);
+				continue;
+			}
+			if (events[i].events & EPOLLIN)
+			{
+				if (_socketFds.find(fd) != _socketFds.end())
+				{
+					int clientFd = accept(fd, NULL, NULL);
+					if(clientFd == -1)
+					{
+						std::perror("accept");
+						continue;
+					}
+					std::memset(&event, 0, sizeof(event));
+					event.events = EPOLLIN | EPOLLOUT;
+					event.data.fd = clientFd;
+					if(epoll_ctl(_epollFd, EPOLL_CTL_ADD, clientFd, &event) == -1)
+					{
+						std::perror("epoll_ctl(EPOLL_CTL_ADD)");
+						close(clientFd);
+						continue;
+					}
+					_requests[clientFd] = Request(clientFd);
+					//handleClient(clientFd);
+					continue;
+				}
+
+				Request &request = _requests[fd];
+
+				Request::e_IOReturn recvReturn = request.retrieve();
+				if (recvReturn == Request::IO_ERROR || recvReturn == Request::IO_DISCONNECT)
+				{
+					if (recvReturn == Request::IO_ERROR)
+						std::perror("recv");
+					shouldDisconnect = true;
+				}
+
+				Request::e_phase phase = request.parse();
+				if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
+				{
+					// TODO: Create a response for either of these 2 phases
+				}
+			}
+			if (!shouldDisconnect && events[i].events & EPOLLOUT)
+			{
+				// TODO: Check if a response exists and if it is complete to send it
+			}
+			if (shouldDisconnect)
+			{
+				if(epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
+					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
+				_requests.erase(fd);
+				close(fd);
 			}
 		}
 	}
-	close(socketFd);
-    close(epollFd);
 }
 
-int WebServer::createServer(void)
+int WebServer::createServer()
 {
 	int socketFd;
 	struct addrinfo hints, *servinfo, *p;
@@ -337,19 +399,20 @@ int WebServer::createServer(void)
 
 	for (vector<Server>::const_iterator it = _servers.begin(); it != _servers.end(); it++)
 	{
-		char *const address = NULL;
-		char *const port = DEFAULT_PORT;
-		string listenAddress;
-		string listenPort;
+		char const *port = DEFAULT_PORT,
+					*address = NULL;
+		string listenPort,
+				listenAddress;
 		if (it->_configs.find("listen") != it->_configs.end())
 		{
-			listenAddress = Utils::getListenAddress(it->_configs["listen"]);
-			listenPort = Utils::getListenPort(it->_configs["listen"]);
-			if (listenAddress.empty() || listenPort.empty())
+			listenPort = Utils::getListenPort(it->_configs.at("listen"));
+			listenAddress = Utils::getListenPort(it->_configs.at("listen"));
+			if (listenPort.empty() || listenAddress.empty())
 				throw std::runtime_error("Invalid listen values");
-			address = listenAddress.c_str();
 			port = listenPort.c_str();
+			address = listenAddress.c_str();
 		}
+
 		rv = getaddrinfo(address, port, &hints, &servinfo);
 
 		if(rv!=0)
@@ -364,7 +427,7 @@ int WebServer::createServer(void)
 
 			if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(int)) == -1)
 			{
-				close(socketFD);
+				close(socketFd);
 				continue;
 			}
 			if(bind(socketFd, p->ai_addr, p->ai_addrlen) == -1)
@@ -382,10 +445,10 @@ int WebServer::createServer(void)
 		}
 		if(listen(socketFd, 10) == -1)
 		{
-			perror("listen");
+			std::perror("listen");
 			return 1;
 		}
-		_socketFds.push_back(socketFd);
+		_socketFds.insert(socketFd);
 	}
 	//loop(socketFd);
 	return 0;
@@ -441,18 +504,24 @@ void Utils::sigchld_handler(int s)
 	errno = saved_errno;
 }
 
-string Utils::getListenAddress(string const &listenKey)
+string Utils::getListenAddress(t_vecString const &listenValue)
 {
-	std::size_t pos = listenKey.find(':');
+	if (listenValue.size() == 0)
+		return string();
+	string const &value = listenValue[0];
+	std::size_t pos = value.rfind(':');
 	if (pos == string::npos)
 		return string();
-	return listen.substr(0, pos);
+	return value.substr(0, pos);
 }
 
-string Utils::getListenPort(string const &listenKey)
+string Utils::getListenPort(t_vecString const &listenValue)
 {
-	std::size_t pos = listenKey.find(':');
+	if (listenValue.size() == 0)
+		return string();
+	string const &value = listenValue[0];
+	std::size_t pos = value.rfind(':');
 	if (pos == string::npos)
 		return string();
-	return listenKey.substr(pos + 1);
+	return value.substr(pos + 1);
 }
