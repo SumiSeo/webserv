@@ -113,8 +113,9 @@ void Request::parseBody()
 		std::size_t pos = 0;
 		if (!_body.chunkCompleted)
 		{
-			if (_body.data.size() == _body.len) // Read chunk size
+			if (_body.data.size() == _body.len)
 			{
+				// Read chunk size
 				pos = _buffer.find(HTTP_DELIMITER);
 				if (pos == string::npos)
 					return;
@@ -126,24 +127,22 @@ void Request::parseBody()
 					_phase = PHASE_ERROR;
 					return;
 				}
-				_buffer = _buffer.substr(pos + sizeof(HTTP_DELIMITER));
+				_buffer = _buffer.substr(pos + std::strlen(HTTP_DELIMITER));
 				_body.len += static_cast<std::size_t>(contentLen);
 			}
-			while (_body.data.size() < _body.len) // Read chunk data
+			while (_body.data.size() < _body.len)
 			{
-				std::size_t appendSize = _body.len - _body.data.size();
-				pos = _buffer.find(HTTP_DELIMITER);
-				appendSize = std::min(appendSize, pos);
+				// Read chunk data
+				std::size_t appendSize = std::min(_body.len - _body.data.size(), _buffer.size());
 				_body.data += _buffer.substr(0, appendSize);
-				_body.len += appendSize;
+				_buffer = _buffer.substr(appendSize);
+				pos = _buffer.find(HTTP_DELIMITER);
 				if (pos == string::npos)
-				{
-					string().swap(_buffer);
 					return;
-				}
 
-				_buffer = _buffer.substr(pos + sizeof(HTTP_DELIMITER));
+				_buffer = _buffer.substr(pos + std::strlen(HTTP_DELIMITER));
 
+				// Read chunk size
 				pos = _buffer.find(HTTP_DELIMITER);
 				if (pos == string::npos)
 					return;
@@ -155,20 +154,22 @@ void Request::parseBody()
 					_phase = PHASE_ERROR;
 					return;
 				}
-				_buffer = _buffer.substr(pos + sizeof(HTTP_DELIMITER));
+				_buffer = _buffer.substr(pos + std::strlen(HTTP_DELIMITER));
 				_body.len += static_cast<std::size_t>(contentLen);
 			}
+			_body.len = _body.data.size();
 			stringstream number;
 			number << _body.len;
 			_headers["CONTENT-LENGTH"] = number.str();
+			_body.chunkCompleted = true;
 		}
-		_body.chunkCompleted = true;
 
 		pos = _buffer.find(HTTP_DELIMITER);
-		while (pos != string::npos) // Read trailer fields
+		while (pos != string::npos)
 		{
+			// Read trailer fields
 			string fieldLine = _buffer.substr(0, pos);
-			_buffer = _buffer.substr(pos + sizeof(HTTP_DELIMITER));
+			_buffer = _buffer.substr(pos + std::strlen(HTTP_DELIMITER));
 			t_pairStrings field = parseFieldLine(fieldLine);
 
 			if (!field.first.empty())
