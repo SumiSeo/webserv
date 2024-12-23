@@ -165,29 +165,33 @@ void Request::parseBody()
 		}
 
 		pos = _buffer.find(HTTP_DELIMITER);
-		while (pos != string::npos)
+		if (pos != 0)
 		{
-			// Read trailer fields
-			string fieldLine = _buffer.substr(0, pos);
-			_buffer = _buffer.substr(pos + std::strlen(HTTP_DELIMITER));
-			t_pairStrings field = parseFieldLine(fieldLine);
-
-			if (!field.first.empty())
+			while (pos != string::npos)
 			{
-				if (_headers.find(field.first) != _headers.end())
-					_headers[field.first] += ", " + field.second;
-				else
-					_headers.insert(field);
+				// Read trailer fields
+				string fieldLine = _buffer.substr(0, pos);
+				_buffer = _buffer.substr(pos + std::strlen(HTTP_DELIMITER));
+				t_pairStrings field = parseFieldLine(fieldLine);
+
+				if (!field.first.empty())
+				{
+					if (_headers.find(field.first) != _headers.end())
+						_headers[field.first] += ", " + field.second;
+					else
+						_headers.insert(field);
+				}
+
+				pos = _buffer.find(HTTP_DELIMITER);
+
+				if (pos == string::npos)
+					return;
+
+				if (pos == 0) // If there is two HTTP_DELIMITER in a row, then the body message is finished
+					break;
 			}
-
-			pos = _buffer.find(HTTP_DELIMITER);
-
-			if (pos == string::npos)
-				return;
-
-			if (pos == 0) // If there is two HTTP_DELIMITER in a row, then the body message is finished
-				break;
 		}
+		_buffer = _buffer.substr(std::strlen(HTTP_DELIMITER));
 		_phase = PHASE_BODY;
 	}
 	else if (contentHeaderIt != _headers.end())
