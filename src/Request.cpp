@@ -198,7 +198,7 @@ void Request::parseBody()
 	{
 		char *pEnd = NULL;
 		long contentLen = std::strtol(contentHeaderIt->second.c_str(), &pEnd, 10);
-		if (*pEnd != '\0' || contentLen < 0l || errno == ERANGE)
+		if (*pEnd != '\0' || contentLen < 0 || errno == ERANGE)
 		{
 			_statusCode = BAD_REQUEST;
 			_phase = PHASE_ERROR;
@@ -295,7 +295,7 @@ string Utils::trimString(string const &input, string const &charset)
 	if (start == string::npos)
 		start = 0;
 	std::size_t end = input.find_last_not_of(charset);
-	return input.substr(start, end - start);
+	return input.substr(start, end - start + 1);
 }
 
 
@@ -306,7 +306,7 @@ bool Utils::isValidFieldValue(string const &fieldValue)
 
 	string::const_iterator it = fieldValue.begin();
 	if (!std::isprint(static_cast<unsigned char>(*it))
-	|| !(static_cast<unsigned char>(*it) >= 0x80 && static_cast<unsigned char>(*it) <= 0xFF))
+	&& !(static_cast<unsigned char>(*it) >= 0x80 && static_cast<unsigned char>(*it) <= 0xFF))
 		return false;
 
 	++it;
