@@ -122,8 +122,8 @@ Request::MessageBody &Request::MessageBody::operator=(MessageBody const &rhs)
 
 void Request::parseBody()
 {
-	t_mapString::const_iterator contentHeaderIt = _headers.find("CONTENT-LENGTH"),
-								transferHeaderIt = _headers.find("TRANSFER-ENCODING");
+	t_mapString::iterator contentHeaderIt = _headers.find("CONTENT-LENGTH"),
+							transferHeaderIt = _headers.find("TRANSFER-ENCODING");
 
 	if (transferHeaderIt != _headers.end())
 	{
@@ -142,6 +142,7 @@ void Request::parseBody()
 			return;
 
 		_buffer = _buffer.substr(std::strlen(HTTP_DELIMITER));
+		_headers.erase(transferHeaderIt);
 		_phase = PHASE_BODY;
 	}
 	else if (contentHeaderIt != _headers.end())
