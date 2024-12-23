@@ -1,12 +1,35 @@
+#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
+#include <cstring>
+#include <sstream>
+#include <stdint.h>
 
 #include "Request.hpp"
 
 using std::string;
+using std::stringstream;
+
+namespace
+{
+	char const HTTP_DELIMITER[] = "\r\n";
+	char const HTTP_WHITESPACES[] = "\t ";
+}
+
+namespace Utils
+{
+	string uppercaseString(string const &input);
+	int toupper(char c);
+	bool isValidToken(string const &input);
+	string trimString(string const &input, string const &charset);
+	bool isValidFieldValue(string const &fieldValue);
+}
 
 // --- Public --- //
-Request::Request()
+Request::Request():
+	_fd(-1),
+	_phase(PHASE_ERROR),
+	_statusCode(NONE)
 {
 }
 
@@ -73,6 +96,12 @@ Request::e_phase Request::parse()
 }
 
 // --- Private --- //
+Request::MessageBody::MessageBody():
+	len(0),
+	chunkCompleted(false)
+{
+}
+
 void Request::parseBody()
 {
 	t_mapString::const_iterator contentHeaderIt = _headers.find("CONTENT-LENGTH"),
@@ -80,30 +109,210 @@ void Request::parseBody()
 
 	if (transferHeaderIt != _headers.end())
 	{
+		long contentLen = 0;
+		std::size_t pos = 0;
+		if (!_body.chunkCompleted)
+		{
+			if (_body.data.size() == _body.len) // Read chunk size
+			{
+				pos = _buffer.find(HTTP_DELIMITER);
+				if (pos == string::npos)
+					return;
+
+				contentLen = std::strtol(_buffer.c_str(), NULL, 16);
+				if (contentLen < 0 || errno == ERANGE)
+				{
+					_statusCode = BAD_REQUEST;
+					_phase = PHASE_ERROR;
+					return;
+				}
+				_buffer = _buffer.substr(pos + sizeof(HTTP_DELIMITER));
+				_body.len += static_cast<std::size_t>(contentLen);
+			}
+			while (_body.data.size() < _body.len) // Read chunk data
+			{
+				std::size_t appendSize = _body.len - _body.data.size();
+				pos = _buffer.find(HTTP_DELIMITER);
+				appendSize = std::min(appendSize, pos);
+				_body.data += _buffer.substr(0, appendSize);
+				_body.len += appendSize;
+				if (pos == string::npos)
+				{
+					string().swap(_buffer);
+					return;
+				}
+
+				_buffer = _buffer.substr(pos + sizeof(HTTP_DELIMITER));
+
+				pos = _buffer.find(HTTP_DELIMITER);
+				if (pos == string::npos)
+					return;
+
+				contentLen = std::strtol(_buffer.c_str(), NULL, 16);
+				if (contentLen < 0 || errno == ERANGE)
+				{
+					_statusCode = BAD_REQUEST;
+					_phase = PHASE_ERROR;
+					return;
+				}
+				_buffer = _buffer.substr(pos + sizeof(HTTP_DELIMITER));
+				_body.len += static_cast<std::size_t>(contentLen);
+			}
+			stringstream number;
+			number << _body.len;
+			_headers["CONTENT-LENGTH"] = number.str();
+		}
+		_body.chunkCompleted = true;
+
+		pos = _buffer.find(HTTP_DELIMITER);
+		while (pos != string::npos) // Read trailer fields
+		{
+			string fieldLine = _buffer.substr(0, pos);
+			_buffer = _buffer.substr(pos + sizeof(HTTP_DELIMITER));
+			t_pairStrings field = parseFieldLine(fieldLine);
+
+			if (!field.first.empty())
+			{
+				if (_headers.find(field.first) != _headers.end())
+					_headers[field.first] += ", " + field.second;
+				else
+					_headers.insert(field);
+			}
+
+			pos = _buffer.find(HTTP_DELIMITER);
+
+			if (pos == string::npos)
+				return;
+
+			if (pos == 0) // If there is two HTTP_DELIMITER in a row, then the body message is finished
+				break;
+		}
+		_phase = PHASE_BODY;
 	}
 	else if (contentHeaderIt != _headers.end())
 	{
 		char *pEnd = NULL;
-		unsigned long contentLen = std::strtoul(contentHeaderIt->second.c_str(), &pEnd, 10);
-		if (*pEnd != '\0' || errno == ERANGE)
+		long contentLen = std::strtol(contentHeaderIt->second.c_str(), &pEnd, 10);
+		if (*pEnd != '\0' || contentLen < 0l || errno == ERANGE)
 		{
 			_statusCode = BAD_REQUEST;
 			_phase = PHASE_ERROR;
 			return;
 		}
-		unsigned long appendSize = contentLen - _body.size();
+		std::size_t appendSize = static_cast<std::size_t>(contentLen) - _body.len;
 		if (_buffer.size() < appendSize)
 		{
-			_body += _buffer;
+			_body.data += _buffer;
+			_body.len += _buffer.size();
 			string().swap(_buffer);
 		}
 		else
 		{
-			_body += _buffer.substr(0, appendSize);
+			_body.data += _buffer.substr(0, appendSize);
+			_body.len += appendSize;
+			_body.chunkCompleted = true;
 			_buffer = _buffer.substr(appendSize);
 			_phase = PHASE_BODY;
 		}
 	}
 	else
 		_phase = PHASE_BODY;
+}
+
+Request::t_pairStrings Request::parseFieldLine(string const &line)
+{
+	t_pairStrings field;
+	std::size_t pos = line.find(':');
+	if (pos == string::npos)
+		return field;
+
+	string fieldName = line.substr(0, pos);
+	if (!Utils::isValidToken(fieldName))
+		return field;
+
+	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
+	if (!Utils::isValidFieldValue(fieldValue))
+		return field;
+
+	field.first = Utils::uppercaseString(fieldName);
+	field.second = fieldValue;
+	return field;
+}
+
+// --- Static Functions --- //
+string Utils::uppercaseString(string const &input)
+{
+	string output(input);
+	std::transform(output.begin(), output.end(), output.begin(), &Utils::toupper);
+	return output;
+}
+
+int Utils::toupper(char c)
+{
+	return std::toupper(static_cast<unsigned char>(c));
+}
+
+bool Utils::isValidToken(string const &input)
+{
+	if (input.size() < 1)
+		return false;
+	std::size_t const HASH_MAP_SIZE = 256;
+	uint8_t hashMap[HASH_MAP_SIZE];
+	std::memset(hashMap, 0, sizeof(*hashMap) * HASH_MAP_SIZE);
+	hashMap[static_cast<unsigned char>('!')] = 1;
+	hashMap[static_cast<unsigned char>('#')] = 1;
+	hashMap[static_cast<unsigned char>('$')] = 1;
+	hashMap[static_cast<unsigned char>('%')] = 1;
+	hashMap[static_cast<unsigned char>('&')] = 1;
+	hashMap[static_cast<unsigned char>('\'')] = 1;
+	hashMap[static_cast<unsigned char>('*')] = 1;
+	hashMap[static_cast<unsigned char>('+')] = 1;
+	hashMap[static_cast<unsigned char>('-')] = 1;
+	hashMap[static_cast<unsigned char>('.')] = 1;
+	hashMap[static_cast<unsigned char>('^')] = 1;
+	hashMap[static_cast<unsigned char>('_')] = 1;
+	hashMap[static_cast<unsigned char>('`')] = 1;
+	hashMap[static_cast<unsigned char>('|')] = 1;
+	hashMap[static_cast<unsigned char>('~')] = 1;
+	for (string::const_iterator it = input.begin(); it != input.end(); ++it)
+	{
+		if (!std::isalpha(static_cast<unsigned char>(*it))
+		&& !std::isdigit(static_cast<unsigned char>(*it))
+		&& !hashMap[static_cast<unsigned char>(*it)])
+			return false;
+	}
+	return true;
+}
+
+string Utils::trimString(string const &input, string const &charset)
+{
+	std::size_t start = input.find_first_not_of(charset);
+	if (start == string::npos)
+		start = 0;
+	std::size_t end = input.find_last_not_of(charset);
+	return input.substr(start, end - start);
+}
+
+
+bool Utils::isValidFieldValue(string const &fieldValue)
+{
+	if (fieldValue.empty())
+		return true;
+
+	string::const_iterator it = fieldValue.begin();
+	if (!std::isprint(static_cast<unsigned char>(*it))
+	|| !(static_cast<unsigned char>(*it) >= 0x80 && static_cast<unsigned char>(*it) <= 0xFF))
+		return false;
+
+	++it;
+	for (; it != fieldValue.end(); ++it)
+	{
+		unsigned char const &c = *it;
+		if (c != '\t'
+		&& c != ' '
+		&& !std::isprint(c)
+		&& !(c >= 0x80 && c <= 0xFF))
+			return false;
+	}
+	return true;
 }
