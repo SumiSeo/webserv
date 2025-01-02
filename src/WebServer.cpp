@@ -258,6 +258,7 @@ void handleClient(int clientFd)
 		Request req;
 		req.parse(buffer);
 		std::cout << "Received " << bytes_received << " bytes" << std::endl;
+		std::cout << "*******DATA PRINTED DONW BELOW********" << std::endl;
 		std::cout << "Data: " << std::string(buffer, bytes_received) << std::endl;
 	}
 }

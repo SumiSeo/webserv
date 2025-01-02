@@ -27,7 +27,7 @@ namespace Utils
 // --- Public --- //
 Request::Request():
 	_fd(-1),
-	_phase(PHASE_ERROR),
+	_phase(PHASE_EMPTY),
 	_statusCode(NONE)
 {
 	std::cout<<"*****************TESTREQUEST***********"<<std::endl;
@@ -46,7 +46,7 @@ Request::Request(Request const &src):
 
 Request::Request(int fd):
 	_fd(fd),
-	_phase(PHASE_EMPTY),
+	_phase(PHASE_ERROR),
 	_statusCode(NONE)
 {
 }
@@ -75,13 +75,18 @@ Request::e_IOReturn Request::retrieve()
 Request::e_phase Request::parse(char buffer[1024])
 {
 	(void)buffer;
-	if (_phase == PHASE_EMPTY)
-	{
-		// Parse the start line
-	}
+	int it = 0;
+	//there is nothing to do here, sine there is nothing to parse
+	if(buffer[0] == '\0')
+		_phase = PHASE_EMPTY;
+	else
+		_phase = PHASE_START_LINE;
 	if (_phase == PHASE_START_LINE)
 	{
+		i++;
+		std::cout<<"Start line exist"<<std::endl;
 		// Parse the headers line
+		parseStartLine(buffer[i]);
 	}
 	if (_phase == PHASE_HEADERS)
 	{
