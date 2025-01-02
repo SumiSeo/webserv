@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
-
+#include <iostream>
 #include "Request.hpp"
 
 using std::string;
@@ -30,6 +30,7 @@ Request::Request():
 	_phase(PHASE_ERROR),
 	_statusCode(NONE)
 {
+	std::cout<<"*****************TESTREQUEST***********"<<std::endl;
 }
 
 Request::Request(Request const &src):
@@ -71,8 +72,9 @@ Request::e_IOReturn Request::retrieve()
 	return IO_SUCCESS;
 }
 
-Request::e_phase Request::parse()
+Request::e_phase Request::parse(char buffer[1024])
 {
+	(void)buffer;
 	if (_phase == PHASE_EMPTY)
 	{
 		// Parse the start line
@@ -93,6 +95,8 @@ Request::e_phase Request::parse()
 	}
 	return _phase;
 }
+
+
 
 // --- Private --- //
 Request::MessageBody::MessageBody():
@@ -118,6 +122,11 @@ Request::MessageBody &Request::MessageBody::operator=(MessageBody const &rhs)
 	len = rhs.len;
 	chunkCompleted = rhs.chunkCompleted;
 	return *this;
+}
+
+void Request::parseHeader(char buffer[1024])
+{
+	(void)buffer;
 }
 
 void Request::parseBody()

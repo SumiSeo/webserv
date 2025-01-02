@@ -3,7 +3,9 @@
 #include <map>
 #include <sstream>
 
+
 #include "WebServer.hpp"
+#include "Request.hpp"
 
 using std::ifstream;
 using std::string;
@@ -250,7 +252,11 @@ void handleClient(int clientFd)
 	else if (bytes_received == 0)
 		std::cout << "Connection closed by peer" << std::endl;
 	else 
-	{
+	{	
+		//succesfully received request 
+
+		Request req;
+		req.parse(buffer);
 		std::cout << "Received " << bytes_received << " bytes" << std::endl;
 		std::cout << "Data: " << std::string(buffer, bytes_received) << std::endl;
 	}
