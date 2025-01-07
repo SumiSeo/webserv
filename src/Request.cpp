@@ -120,9 +120,38 @@ int Request::parseHeader(std::string buffer)
 	}
 	t_pairStrings field = parseStartLine(line);
 	_headers.insert(field);
+	parseHeaderDeep(buffer,start);
+
 	return i;
 }
 
+void Request::parseHeaderDeep(std::string buffer,int start)
+{
+	std::string tmp;
+
+	while(buffer[start])
+	{
+		if(buffer[start]=='\n')
+		{
+			start++;
+			break;
+		}
+		std::cout<<"HERE"<<buffer[start]<<std::endl;
+
+		// else
+		// {
+		// 	int end = start;
+		// 	while(buffer[start]!='\n')
+		// 		end++;
+		// 	tmp = buffer.substr(start,end);
+		// 	std::cout<<"tmp"<<tmp<<std::endl;
+		// 	start++;
+		// }
+		
+	}
+
+	// std::cout<<"yo"<<buffer[start]<<std::endl;
+}
 
 Request::MessageBody::MessageBody():
 	len(0),
@@ -279,7 +308,6 @@ Request::t_pairStrings Request::parseFieldLine(string const &line)
 {
 	t_pairStrings field;
 	std::size_t pos = line.find(':');
-	std::cout<<"here" << pos<<std::endl;
 	if (pos == string::npos)
 		return field;
 

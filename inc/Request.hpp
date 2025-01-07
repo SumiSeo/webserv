@@ -97,8 +97,10 @@ class Request
 	 */
 	t_pairStrings parseFieldLine(std::string const &line);
 	t_pairStrings parseStartLine(std::string const &line);
-
+	void parseHeaderDeep(std::string buffer, int start);
+	
 	e_statusFunction readBodyContent(char const contentLength[]);
+	
 };
 
 #endif
