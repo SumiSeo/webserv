@@ -1,3 +1,5 @@
+
+#include <sys/socket.h>
 #include <algorithm>
 #include <cerrno>
 #include <cstdlib>
@@ -11,6 +13,7 @@ using std::stringstream;
 
 namespace
 {
+  std::size_t const MAX_BUFFER_LENGTH = 8192;
 	char const HTTP_DELIMITER[] = "\r\n";
 	char const HTTP_WHITESPACES[] = "\t ";
 }
@@ -68,6 +71,16 @@ Request &Request::operator=(Request const &rhs)
 
 Request::e_IOReturn Request::retrieve()
 {
+	char buffer[MAX_BUFFER_LENGTH + 1];
+	ssize_t bytesRead = recv(_fd, buffer, MAX_BUFFER_LENGTH, 0);
+
+	if (bytesRead == -1)
+		return IO_ERROR;
+	if (bytesRead == 0)
+		return IO_DISCONNECT;
+
+	buffer[bytesRead] = '\0';
+	_buffer += buffer;
 	return IO_SUCCESS;
 }
 
