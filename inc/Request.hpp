@@ -1,8 +1,11 @@
 #ifndef __REQUEST_HPP__
 # define __REQUEST_HPP__
 
-# include <string>
 # include <map>
+# include <string>
+# include <utility>
+
+# include "statusCode.hpp"
 
 class Request
 {
@@ -41,6 +44,7 @@ class Request
   private:
 	/* Typedefs */
 	typedef std::map<std::string, std::string> t_mapString;
+	typedef std::pair<std::string, std::string> t_pairStrings;
 
 	/* New Variable Types */
 	struct StartLine
@@ -49,6 +53,24 @@ class Request
 		std::string requestTarget;
 		std::string httpVersion;
 	};
+	class MessageBody
+	{
+	  public:
+		MessageBody();
+		MessageBody(MessageBody const &src);
+		~MessageBody();
+
+		MessageBody &operator=(MessageBody const &rhs);
+
+		std::string data;
+		std::size_t len;
+		bool chunkCompleted;
+	};
+	enum e_statusFunction
+	{
+		STATUS_FUNCTION_NONE,
+		STATUS_FUNCTION_SHOULD_RETURN,
+	};
 
 	/* Members */
 	int _fd;
@@ -56,8 +78,24 @@ class Request
 	std::string _buffer;
 	StartLine _startLine;
 	t_mapString _headers;
-	std::string _body;
+	MessageBody _body;
+	e_statusCode _statusCode;
 
+	/* Methods */
+	// -- Utils Functions -- //
+	void parseBody();
+
+	e_statusFunction readChunkSize();
+	e_statusFunction readChunkData();
+	e_statusFunction readTrailerFields();
+
+	/*
+	 * This function reads a line (without HTTP_DELIMITER "\r\n")
+	 * and returns a pair of key-value (field-name and field-value).
+	 * If an error occurs, it returns a pair of key-value that are empties.
+	 */
+	t_pairStrings parseFieldLine(std::string const &line);
+	e_statusFunction readBodyContent(char const contentLength[]);
 };
 
 #endif
