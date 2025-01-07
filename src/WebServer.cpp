@@ -253,11 +253,7 @@ void handleClient(int clientFd)
 		std::cout << "Connection closed by peer" << std::endl;
 	else 
 	{	
-		//succesfully received request 
-
-		
 		std::cout << "Received " << bytes_received << " bytes" << std::endl;
-		std::cout << "*******DATA PRINTED DONW BELOW********" << std::endl;
 		Request req(0);
 		req.parse(std::string(buffer));
 		std::cout << "Data: " << std::string(buffer, bytes_received) << std::endl;

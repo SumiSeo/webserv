@@ -81,9 +81,10 @@ Request::e_phase Request::parse(std::string buffer)
 		_phase = PHASE_START_LINE;
 	if (_phase == PHASE_START_LINE)
 	{
-		int startLineIndex= parseHeader(buffer);
-		std::cout<<"&&&&&"<< startLineIndex<<std::endl;
-
+		if(parseHeader(buffer))
+			_phase = PHASE_HEADERS;
+		else
+			return _phase;
 	}
 	if (_phase == PHASE_HEADERS)
 	{
@@ -104,10 +105,8 @@ Request::e_phase Request::parse(std::string buffer)
 
 int Request::parseHeader(std::string buffer)
 {
-	std::cout<<"******Parse header called*****"<<std::endl;
 	int start;
 	start = 0;
-	
 	while(buffer[start]!='\n')
 	{
 		start++;
@@ -119,12 +118,9 @@ int Request::parseHeader(std::string buffer)
 		line[i] = buffer[i];
 		i++;
 	}
-	std::string f_line = line;
-	std::cout<<"start"<<start << f_line<<std::endl;
+	t_pairStrings field = parseStartLine(line);
+	_headers.insert(field);
 
-	t_pairStrings field = parseFieldLine(f_line);
-	std::cout << "**->" << "field.first : " << field.first<< "<-**" <<std::endl;
-	std::cout << "**->" << "field.second :" << field.second<< "<-**" <<std::endl;
 	return i;
 }
 
@@ -264,10 +260,29 @@ Request::e_statusFunction Request::readTrailerFields()
 	return STATUS_FUNCTION_NONE;
 }
 
+Request::t_pairStrings Request::parseStartLine(string const &line)
+{
+	t_pairStrings field;
+	std::size_t pos = line.find('/');
+	std::cout<<"here" << pos<<std::endl;
+	if (pos == string::npos)
+		return field;
+
+	string fieldName = line.substr(0, pos);
+	
+	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
+	
+	field.first = Utils::uppercaseString(fieldName);
+	field.second = fieldValue;
+	return field;
+}
+
+
 Request::t_pairStrings Request::parseFieldLine(string const &line)
 {
 	t_pairStrings field;
 	std::size_t pos = line.find(':');
+	std::cout<<"here" << pos<<std::endl;
 	if (pos == string::npos)
 		return field;
 
@@ -283,11 +298,8 @@ Request::t_pairStrings Request::parseFieldLine(string const &line)
 		std::cout<<"field none2" << std::endl;
 		return field;
 	}
-
 	field.first = Utils::uppercaseString(fieldName);
 	field.second = fieldValue;
-	std::cout<<"field first"<<field.first << std::endl;
-	std::cout<<"fied second"<<field.second<<std::endl;
 	return field;
 }
 
@@ -355,6 +367,7 @@ bool Utils::isValidToken(string const &input)
 	hashMap[static_cast<unsigned char>('`')] = 1;
 	hashMap[static_cast<unsigned char>('|')] = 1;
 	hashMap[static_cast<unsigned char>('~')] = 1;
+
 	for (string::const_iterator it = input.begin(); it != input.end(); ++it)
 	{
 		if (!std::isalpha(static_cast<unsigned char>(*it))

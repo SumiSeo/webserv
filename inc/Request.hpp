@@ -96,6 +96,8 @@ class Request
 	 * If an error occurs, it returns a pair of key-value that are empties.
 	 */
 	t_pairStrings parseFieldLine(std::string const &line);
+	t_pairStrings parseStartLine(std::string const &line);
+
 	e_statusFunction readBodyContent(char const contentLength[]);
 };
 
