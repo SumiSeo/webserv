@@ -72,21 +72,18 @@ Request::e_IOReturn Request::retrieve()
 	return IO_SUCCESS;
 }
 
-Request::e_phase Request::parse(char buffer[1024])
+Request::e_phase Request::parse(std::string buffer)
 {
-	(void)buffer;
-	int it = 0;
-	//there is nothing to do here, sine there is nothing to parse
+	
 	if(buffer[0] == '\0')
 		_phase = PHASE_EMPTY;
 	else
 		_phase = PHASE_START_LINE;
 	if (_phase == PHASE_START_LINE)
 	{
-		i++;
-		std::cout<<"Start line exist"<<std::endl;
-		// Parse the headers line
-		parseStartLine(buffer[i]);
+		int startLineIndex= parseHeader(buffer);
+		std::cout<<"&&&&&"<< startLineIndex<<std::endl;
+
 	}
 	if (_phase == PHASE_HEADERS)
 	{
@@ -104,6 +101,20 @@ Request::e_phase Request::parse(char buffer[1024])
 
 
 // --- Private --- //
+
+int Request::parseHeader(std::string buffer)
+{
+	std::cout<<"******Parse header called*****"<<std::endl;
+	int start;
+	start = 0;
+	
+	t_pairStrings field = parseFieldLine(buffer);
+	std::cout << "**->" << "field.first : " << field.first<< "<-**" <<std::endl;
+	std::cout << "**->" << "field.second :" << field.second<< "<-**" <<std::endl;
+	return i;
+}
+
+
 Request::MessageBody::MessageBody():
 	len(0),
 	chunkCompleted(false)
@@ -129,10 +140,6 @@ Request::MessageBody &Request::MessageBody::operator=(MessageBody const &rhs)
 	return *this;
 }
 
-void Request::parseHeader(char buffer[1024])
-{
-	(void)buffer;
-}
 
 void Request::parseBody()
 {
@@ -252,14 +259,21 @@ Request::t_pairStrings Request::parseFieldLine(string const &line)
 
 	string fieldName = line.substr(0, pos);
 	if (!Utils::isValidToken(fieldName))
+	{	
+		std::cout<<"field none1" << std::endl;
 		return field;
-
+	}
 	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
 	if (!Utils::isValidFieldValue(fieldValue))
+	{				
+		std::cout<<"field none2" << std::endl;
 		return field;
+	}
 
 	field.first = Utils::uppercaseString(fieldName);
 	field.second = fieldValue;
+	std::cout<<"field first"<<field.first << std::endl;
+	std::cout<<"fied second"<<field.second<<std::endl;
 	return field;
 }
 

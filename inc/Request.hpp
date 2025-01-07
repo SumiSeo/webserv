@@ -37,7 +37,7 @@ class Request
 
 	// -- Main Functions -- //
 	e_IOReturn retrieve();
-	e_phase parse(char buffer[1024]);
+	e_phase parse(std::string buffer);
 
   protected:
 
@@ -84,7 +84,7 @@ class Request
 	/* Methods */
 	// -- Utils Functions -- //
 	void parseBody();
-	void parseHeader(char buffer[1024]);
+	int parseHeader(std::string buffer);
 
 	e_statusFunction readChunkSize();
 	e_statusFunction readChunkData();

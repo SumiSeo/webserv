@@ -255,10 +255,11 @@ void handleClient(int clientFd)
 	{	
 		//succesfully received request 
 
-		Request req;
-		req.parse(buffer);
+		
 		std::cout << "Received " << bytes_received << " bytes" << std::endl;
 		std::cout << "*******DATA PRINTED DONW BELOW********" << std::endl;
+		Request req(0);
+		req.parse(std::string(buffer));
 		std::cout << "Data: " << std::string(buffer, bytes_received) << std::endl;
 	}
 }
