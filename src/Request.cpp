@@ -108,7 +108,21 @@ int Request::parseHeader(std::string buffer)
 	int start;
 	start = 0;
 	
-	t_pairStrings field = parseFieldLine(buffer);
+	while(buffer[start]!='\n')
+	{
+		start++;
+	}
+	char line[start];
+	int i = 0;
+	while(i < start)
+	{
+		line[i] = buffer[i];
+		i++;
+	}
+	std::string f_line = line;
+	std::cout<<"start"<<start << f_line<<std::endl;
+
+	t_pairStrings field = parseFieldLine(f_line);
 	std::cout << "**->" << "field.first : " << field.first<< "<-**" <<std::endl;
 	std::cout << "**->" << "field.second :" << field.second<< "<-**" <<std::endl;
 	return i;
