@@ -120,7 +120,6 @@ int Request::parseHeader(std::string buffer)
 	}
 	t_pairStrings field = parseStartLine(line);
 	_headers.insert(field);
-
 	return i;
 }
 
@@ -269,9 +268,7 @@ Request::t_pairStrings Request::parseStartLine(string const &line)
 		return field;
 
 	string fieldName = line.substr(0, pos);
-	
 	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
-	
 	field.first = Utils::uppercaseString(fieldName);
 	field.second = fieldValue;
 	return field;
