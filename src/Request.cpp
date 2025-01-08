@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
-
+#include <iostream>
 #include "Request.hpp"
 
 using std::string;
@@ -30,9 +30,10 @@ namespace Utils
 // --- Public --- //
 Request::Request():
 	_fd(-1),
-	_phase(PHASE_ERROR),
+	_phase(PHASE_EMPTY),
 	_statusCode(NONE)
 {
+	std::cout<<"*****************TESTREQUEST***********"<<std::endl;
 }
 
 Request::Request(Request const &src):
@@ -48,7 +49,7 @@ Request::Request(Request const &src):
 
 Request::Request(int fd):
 	_fd(fd),
-	_phase(PHASE_EMPTY),
+	_phase(PHASE_ERROR),
 	_statusCode(NONE)
 {
 }
@@ -84,30 +85,99 @@ Request::e_IOReturn Request::retrieve()
 	return IO_SUCCESS;
 }
 
-Request::e_phase Request::parse()
+Request::e_phase Request::parse(std::string buffer)
 {
-	if (_phase == PHASE_EMPTY)
-	{
-		// Parse the start line
-	}
+	_buffer = buffer;
+	if(buffer[0] == '\0')
+		_phase = PHASE_EMPTY;
+	else
+		_phase = PHASE_START_LINE;
 	if (_phase == PHASE_START_LINE)
 	{
-		// Parse the headers line
+		if(parseHeader(buffer))
+			_phase = PHASE_HEADERS;
 	}
 	if (_phase == PHASE_HEADERS)
 	{
-		// Parse the body line
 		parseBody();
 	}
 	if (_phase == PHASE_BODY)
 	{
-		// Set complete
 		_phase = PHASE_COMPLETE;
 	}
 	return _phase;
 }
 
+
+
 // --- Private --- //
+
+int Request::parseHeader(std::string buffer)
+{
+	int start;
+	start = 0;
+	while(buffer[start]!='\n')
+		start++;
+	char line[start];
+	int i = 0;
+	while(i < start)
+	{
+		line[i] = buffer[i];
+		i++;
+	}
+	t_pairStrings field = parseStartLine(line);
+	assignStartLine(field);
+	parseHeaderDeep(start);
+
+	/* Debugging: These line belows will be deleted in the end */
+	printStartLine();
+	printRequest();
+	//
+
+	if(_headers.size() <= 0)
+		return 0;
+	return 1;
+}
+
+void Request::assignStartLine(t_pairStrings field)
+{
+	_startLine.method = field.first;
+	int check = 0;
+	std::string target;
+	std::string version; 
+	for(int i  = 0 ; i < field.second[i]; i ++)
+	{
+		if(field.second[i] == '/')
+		{	
+			check = i;
+			break;
+		}
+	}
+	_startLine.httpVersion = field.second.substr(check+1);
+	_startLine.requestTarget = field.second.substr(0,field.second.size()-check-1);
+}
+
+void Request::parseHeaderDeep(int start)
+{
+	std::string tmp;
+	std::size_t temp = start;
+
+	while(temp < _buffer.size())
+	{	
+		while (temp < _buffer.size() && (_buffer[temp] == '\r' || _buffer[temp] == '\n'))
+            ++temp;
+		std::size_t end = _buffer.find("\r\n", temp);
+        if (end == std::string::npos)
+            break; 
+
+        std::string line = _buffer.substr(temp, end - temp);
+        temp = end + 1; 
+        t_pairStrings field = parseFieldLine(line);
+        _headers.insert(field);
+    }
+}
+
+
 Request::MessageBody::MessageBody():
 	len(0),
 	chunkCompleted(false)
@@ -132,6 +202,7 @@ Request::MessageBody &Request::MessageBody::operator=(MessageBody const &rhs)
 	chunkCompleted = rhs.chunkCompleted;
 	return *this;
 }
+
 
 void Request::parseBody()
 {
@@ -242,6 +313,20 @@ Request::e_statusFunction Request::readTrailerFields()
 	return STATUS_FUNCTION_NONE;
 }
 
+Request::t_pairStrings Request::parseStartLine(string const &line)
+{
+	t_pairStrings field;
+	std::size_t pos = line.find('/');
+	if (pos == string::npos)
+		return field;
+	string fieldName = line.substr(0, pos);
+	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
+	field.first = Utils::uppercaseString(fieldName);
+	field.second = fieldValue;
+	return field;
+}
+
+
 Request::t_pairStrings Request::parseFieldLine(string const &line)
 {
 	t_pairStrings field;
@@ -252,11 +337,9 @@ Request::t_pairStrings Request::parseFieldLine(string const &line)
 	string fieldName = line.substr(0, pos);
 	if (!Utils::isValidToken(fieldName))
 		return field;
-
 	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
 	if (!Utils::isValidFieldValue(fieldValue))
 		return field;
-
 	field.first = Utils::uppercaseString(fieldName);
 	field.second = fieldValue;
 	return field;
@@ -326,6 +409,7 @@ bool Utils::isValidToken(string const &input)
 	hashMap[static_cast<unsigned char>('`')] = 1;
 	hashMap[static_cast<unsigned char>('|')] = 1;
 	hashMap[static_cast<unsigned char>('~')] = 1;
+
 	for (string::const_iterator it = input.begin(); it != input.end(); ++it)
 	{
 		if (!std::isalpha(static_cast<unsigned char>(*it))
@@ -367,4 +451,19 @@ bool Utils::isValidFieldValue(string const &fieldValue)
 			return false;
 	}
 	return true;
+}
+
+
+// -- debugging fuction --//
+void Request::printRequest()
+{
+	for(t_mapString::iterator it = _headers.begin(); it != _headers.end(); it++)
+		std::cout<<"key : " << it->first <<" " << "value : " << it->second <<std::endl;
+}
+
+void Request::printStartLine()
+{
+	std::cout<<"START LINE method : "<< _startLine.method <<std::endl;
+	std::cout<<"START LINE request Target: "<< _startLine.requestTarget<<std::endl;
+	std::cout<<"START LINE http version: "<< _startLine.httpVersion<<std::endl;
 }

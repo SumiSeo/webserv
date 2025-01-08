@@ -37,7 +37,7 @@ class Request
 
 	// -- Main Functions -- //
 	e_IOReturn retrieve();
-	e_phase parse();
+	e_phase parse(std::string buffer);
 
   protected:
 
@@ -84,6 +84,7 @@ class Request
 	/* Methods */
 	// -- Utils Functions -- //
 	void parseBody();
+	int parseHeader(std::string buffer);
 
 	e_statusFunction readChunkSize();
 	e_statusFunction readChunkData();
@@ -95,7 +96,17 @@ class Request
 	 * If an error occurs, it returns a pair of key-value that are empties.
 	 */
 	t_pairStrings parseFieldLine(std::string const &line);
+	t_pairStrings parseStartLine(std::string const &line);
+	void assignStartLine(t_pairStrings field);
+	void parseHeaderDeep( int start);
+	
 	e_statusFunction readBodyContent(char const contentLength[]);
+
+	// -- debugging function -- /
+	void printRequest();
+	void printStartLine();
+
+	
 };
 
 #endif
