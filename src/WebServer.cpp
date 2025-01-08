@@ -252,7 +252,7 @@ void handleClient(int clientFd)
 	else if (bytes_received == 0)
 		std::cout << "Connection closed by peer" << std::endl;
 	else 
-	{	
+	{
 		std::cout << "Received " << bytes_received << " bytes" << std::endl;
 		Request req(0);
 		req.parse(std::string(buffer));
