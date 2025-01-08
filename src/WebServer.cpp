@@ -270,8 +270,6 @@ void handleClient(int clientFd)
 	else 
 	{
 		std::cout << "Received " << bytes_received << " bytes" << std::endl;
-		Request req(0);
-		req.parse(std::string(buffer));
 		std::cout << "Data: " << std::string(buffer, bytes_received) << std::endl;
 	}
 }

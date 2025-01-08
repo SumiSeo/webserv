@@ -13,9 +13,15 @@ using std::stringstream;
 
 namespace
 {
-  std::size_t const MAX_BUFFER_LENGTH = 8192;
+	std::size_t const MAX_BUFFER_LENGTH = 8192;
 	char const HTTP_DELIMITER[] = "\r\n";
 	char const HTTP_WHITESPACES[] = "\t ";
+	char const *const VALID_METHODS[] = {
+		"GET",
+		"POST",
+		NULL
+	};
+	char const HTTP_VERSION[] = "HTTP/1.1";
 }
 
 namespace Utils
@@ -25,6 +31,7 @@ namespace Utils
 	bool isValidToken(string const &input);
 	string trimString(string const &input, string const &charset);
 	bool isValidFieldValue(string const &fieldValue);
+	bool isValidMethod(string const &method);
 }
 
 // --- Public --- //
@@ -84,17 +91,15 @@ Request::e_IOReturn Request::retrieve()
 	return IO_SUCCESS;
 }
 
-Request::e_phase Request::parse(std::string buffer)
+Request::e_phase Request::parse()
 {
-	_buffer = buffer;
-	if(buffer[0] == '\0')
-		_phase = PHASE_EMPTY;
-	else
-		_phase = PHASE_START_LINE;
+	if (_phase == PHASE_EMPTY)
+	{
+		parseStartLine();
+	}
 	if (_phase == PHASE_START_LINE)
 	{
-		if(parseHeader(buffer))
-			_phase = PHASE_HEADERS;
+		parseHeader();
 	}
 	if (_phase == PHASE_HEADERS)
 	{
@@ -107,75 +112,33 @@ Request::e_phase Request::parse(std::string buffer)
 	return _phase;
 }
 
-
-
 // --- Private --- //
 
-int Request::parseHeader(std::string buffer)
+void Request::parseHeader()
 {
-	int start;
-	start = 0;
-	while(buffer[start]!='\n')
-		start++;
-	char line[start];
-	int i = 0;
-	while(i < start)
-	{
-		line[i] = buffer[i];
-		i++;
-	}
-	t_pairStrings field = parseStartLine(line);
-	assignStartLine(field);
-	parseHeaderDeep(start);
-
-	/* Debugging: These line belows will be deleted in the end */
-	printStartLine();
-	printRequest();
-	//
-
-	if(_headers.size() <= 0)
-		return 0;
-	return 1;
-}
-
-void Request::assignStartLine(t_pairStrings field)
-{
-	_startLine.method = field.first;
-	int check = 0;
-	std::string target;
-	std::string version; 
-	for(int i  = 0 ; i < field.second[i]; i ++)
-	{
-		if(field.second[i] == '/')
-		{	
-			check = i;
-			break;
-		}
-	}
-	_startLine.httpVersion = field.second.substr(check+1);
-	_startLine.requestTarget = field.second.substr(0,field.second.size()-check-1);
-}
-
-void Request::parseHeaderDeep(int start)
-{
-	std::string tmp;
-	std::size_t temp = start;
-
-	while(temp < _buffer.size())
+	while(true)
 	{	
-		while (temp < _buffer.size() && (_buffer[temp] == '\r' || _buffer[temp] == '\n'))
-            ++temp;
-		std::size_t end = _buffer.find("\r\n", temp);
+		std::size_t end = _buffer.find(HTTP_DELIMITER);
         if (end == std::string::npos)
-            break; 
+			return;
 
-        std::string line = _buffer.substr(temp, end - temp);
-        temp = end + 1; 
+		if (end == 0)
+			break;
+
+        string line = _buffer.substr(0, end);
         t_pairStrings field = parseFieldLine(line);
-        _headers.insert(field);
+		if (!field.first.empty())
+		{
+			if (_headers.find(field.first) == _headers.end())
+				_headers.insert(field);
+			else
+				_headers[field.first] += ", " + field.second;
+		}
+		_buffer = _buffer.substr(end + std::strlen(HTTP_DELIMITER));
     }
+	_buffer = _buffer.substr(0, std::strlen(HTTP_DELIMITER));
+	_phase = PHASE_HEADERS;
 }
-
 
 Request::MessageBody::MessageBody():
 	len(0),
@@ -201,7 +164,6 @@ Request::MessageBody &Request::MessageBody::operator=(MessageBody const &rhs)
 	chunkCompleted = rhs.chunkCompleted;
 	return *this;
 }
-
 
 void Request::parseBody()
 {
@@ -312,17 +274,39 @@ Request::e_statusFunction Request::readTrailerFields()
 	return STATUS_FUNCTION_NONE;
 }
 
-Request::t_pairStrings Request::parseStartLine(string const &line)
+void Request::parseStartLine()
 {
-	t_pairStrings field;
-	std::size_t pos = line.find('/');
+	std::size_t pos = _buffer.find(' ');
 	if (pos == string::npos)
-		return field;
-	string fieldName = line.substr(0, pos);
-	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
-	field.first = Utils::uppercaseString(fieldName);
-	field.second = fieldValue;
-	return field;
+		return;
+
+	_startLine.method = _buffer.substr(0, pos);
+	if (!Utils::isValidMethod(_startLine.method))
+		goto error;
+
+	_buffer = _buffer.substr(pos + 1);
+	pos = _buffer.find(' ');
+	if (pos == string::npos)
+		return;
+
+	_startLine.requestTarget = _buffer.substr(0, pos);
+	if (_startLine.requestTarget[0] != '/')
+		goto error;
+
+	_buffer = _buffer.substr(pos + 1);
+	pos = _buffer.find(HTTP_DELIMITER);
+	if (pos == string::npos)
+		return;
+
+	_startLine.httpVersion = _buffer.substr(0, pos);
+	if (_startLine.httpVersion != HTTP_VERSION)
+		goto error;
+
+	_phase = PHASE_START_LINE;
+	return;
+error:
+	_phase = PHASE_ERROR;
+	_statusCode = BAD_REQUEST;
 }
 
 
@@ -336,9 +320,11 @@ Request::t_pairStrings Request::parseFieldLine(string const &line)
 	string fieldName = line.substr(0, pos);
 	if (!Utils::isValidToken(fieldName))
 		return field;
+
 	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
 	if (!Utils::isValidFieldValue(fieldValue))
 		return field;
+
 	field.first = Utils::uppercaseString(fieldName);
 	field.second = fieldValue;
 	return field;
@@ -452,6 +438,15 @@ bool Utils::isValidFieldValue(string const &fieldValue)
 	return true;
 }
 
+bool Utils::isValidMethod(string const &method)
+{
+	for (int i = 0; VALID_METHODS[i] != NULL; ++i)
+	{
+		if (method == VALID_METHODS[i])
+			return true;
+	}
+	return false;
+}
 
 // -- debugging fuction --//
 void Request::printRequest()
