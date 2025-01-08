@@ -106,9 +106,7 @@ int Request::parseHeader(std::string buffer)
 	int start;
 	start = 0;
 	while(buffer[start]!='\n')
-	{
 		start++;
-	}
 	char line[start];
 	int i = 0;
 	while(i < start)
@@ -329,7 +327,7 @@ Request::t_pairStrings Request::parseFieldLine(string const &line)
 	if (!Utils::isValidToken(fieldName))
 		return field;
 	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
-	if (!Utils::isValidFieldValue(fieldValue))			
+	if (!Utils::isValidFieldValue(fieldValue))
 		return field;
 	field.first = Utils::uppercaseString(fieldName);
 	field.second = fieldValue;
