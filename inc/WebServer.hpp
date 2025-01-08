@@ -28,13 +28,10 @@
 class WebServer
 {
   public:
-	/* Members */
+	/* Methods */
 	WebServer(char const fileName[]);
 	~WebServer();
 
-  protected:
-	/* data */
-  private:
 	// Typedefs
 	typedef std::vector<std::string> t_vecString;
 
@@ -49,6 +46,9 @@ class WebServer
 		std::map<std::string, Location> _locations;
 	};
 
+  protected:
+	/* data */
+  private:
 	/* Members */
 	std::vector<Server> _servers;
 	std::set<int> _socketFds;
