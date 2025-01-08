@@ -83,8 +83,6 @@ Request::e_phase Request::parse(std::string buffer)
 	{
 		if(parseHeader(buffer))
 			_phase = PHASE_HEADERS;
-		else
-			return _phase;
 	}
 	if (_phase == PHASE_HEADERS)
 	{
