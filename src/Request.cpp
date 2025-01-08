@@ -88,12 +88,10 @@ Request::e_phase Request::parse(std::string buffer)
 	}
 	if (_phase == PHASE_HEADERS)
 	{
-		// Parse the body line
 		parseBody();
 	}
 	if (_phase == PHASE_BODY)
 	{
-		// Set complete
 		_phase = PHASE_COMPLETE;
 	}
 	return _phase;
@@ -122,36 +120,37 @@ int Request::parseHeader(std::string buffer)
 	_headers.insert(field);
 	parseHeaderDeep(buffer,start);
 
+	for(t_mapString::iterator it = _headers.begin(); it != _headers.end(); it++)
+	{
+		std::cout<<"key : " << it->first <<" " << "value : " << it->second <<std::endl;
+	}
 	return i;
 }
 
 void Request::parseHeaderDeep(std::string buffer,int start)
 {
 	std::string tmp;
+	std::size_t temp = start;
 
-	while(buffer[start])
-	{
-		if(buffer[start]=='\n')
-		{
-			start++;
-			break;
-		}
-		std::cout<<"HERE"<<buffer[start]<<std::endl;
+	while(temp < buffer.size())
+	{	
+		while (temp < buffer.size() && (buffer[temp] == '\r' || buffer[temp] == '\n'))
+            ++temp;
+		std::size_t end = buffer.find('\n', temp);
+        if (end == std::string::npos)
+            break; 
 
-		// else
-		// {
-		// 	int end = start;
-		// 	while(buffer[start]!='\n')
-		// 		end++;
-		// 	tmp = buffer.substr(start,end);
-		// 	std::cout<<"tmp"<<tmp<<std::endl;
-		// 	start++;
-		// }
-		
-	}
+        std::string line = buffer.substr(temp, end - temp);
+        temp = end + 1; 
 
-	// std::cout<<"yo"<<buffer[start]<<std::endl;
+        std::cout << "line"<< line << std::endl;
+
+        t_pairStrings field = parseFieldLine(line);
+        _headers.insert(field);
+    }
+	
 }
+
 
 Request::MessageBody::MessageBody():
 	len(0),
@@ -292,7 +291,6 @@ Request::t_pairStrings Request::parseStartLine(string const &line)
 {
 	t_pairStrings field;
 	std::size_t pos = line.find('/');
-	std::cout<<"here" << pos<<std::endl;
 	if (pos == string::npos)
 		return field;
 
@@ -318,11 +316,11 @@ Request::t_pairStrings Request::parseFieldLine(string const &line)
 		return field;
 	}
 	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
-	if (!Utils::isValidFieldValue(fieldValue))
-	{				
-		std::cout<<"field none2" << std::endl;
-		return field;
-	}
+	// if (!Utils::isValidFieldValue(fieldValue))
+	// {				
+	// 	std::cout<<"field none2" << std::endl;
+	// 	return field;
+	// }
 	field.first = Utils::uppercaseString(fieldName);
 	field.second = fieldValue;
 	return field;
