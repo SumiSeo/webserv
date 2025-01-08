@@ -120,10 +120,11 @@ int Request::parseHeader(std::string buffer)
 	assignStartLine(field);
 	parseHeaderDeep(start);
 
-	
+	/* Debugging: These line belows will be deleted in the end */
 	printStartLine();
 	printRequest();
-	
+	//
+
 	if(_headers.size() <= 0)
 		return 0;
 	return 1;
@@ -309,7 +310,6 @@ Request::t_pairStrings Request::parseStartLine(string const &line)
 	std::size_t pos = line.find('/');
 	if (pos == string::npos)
 		return field;
-
 	string fieldName = line.substr(0, pos);
 	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
 	field.first = Utils::uppercaseString(fieldName);
@@ -327,16 +327,10 @@ Request::t_pairStrings Request::parseFieldLine(string const &line)
 
 	string fieldName = line.substr(0, pos);
 	if (!Utils::isValidToken(fieldName))
-	{	
-		std::cout<<"field none1" << std::endl;
 		return field;
-	}
 	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
-	if (!Utils::isValidFieldValue(fieldValue))
-	{				
-		std::cout<<"field none2" << std::endl;
+	if (!Utils::isValidFieldValue(fieldValue))			
 		return field;
-	}
 	field.first = Utils::uppercaseString(fieldName);
 	field.second = fieldValue;
 	return field;
@@ -455,9 +449,7 @@ bool Utils::isValidFieldValue(string const &fieldValue)
 void Request::printRequest()
 {
 	for(t_mapString::iterator it = _headers.begin(); it != _headers.end(); it++)
-	{
 		std::cout<<"key : " << it->first <<" " << "value : " << it->second <<std::endl;
-	}
 }
 
 void Request::printStartLine()
