@@ -30,10 +30,9 @@ namespace Utils
 // --- Public --- //
 Request::Request():
 	_fd(-1),
-	_phase(PHASE_EMPTY),
+	_phase(PHASE_ERROR),
 	_statusCode(NONE)
 {
-	std::cout<<"*****************TESTREQUEST***********"<<std::endl;
 }
 
 Request::Request(Request const &src):
@@ -49,7 +48,7 @@ Request::Request(Request const &src):
 
 Request::Request(int fd):
 	_fd(fd),
-	_phase(PHASE_ERROR),
+	_phase(PHASE_EMPTY),
 	_statusCode(NONE)
 {
 }
