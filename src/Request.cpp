@@ -30,10 +30,9 @@ namespace Utils
 // --- Public --- //
 Request::Request():
 	_fd(-1),
-	_phase(PHASE_EMPTY),
+	_phase(PHASE_ERROR),
 	_statusCode(NONE)
 {
-	std::cout<<"*****************TESTREQUEST***********"<<std::endl;
 }
 
 Request::Request(Request const &src):
@@ -49,9 +48,10 @@ Request::Request(Request const &src):
 
 Request::Request(int fd):
 	_fd(fd),
-	_phase(PHASE_ERROR),
+	_phase(PHASE_EMPTY),
 	_statusCode(NONE)
 {
+	std::cout<<"*****************TESTREQUEST***********"<<std::endl;
 }
 
 Request::~Request()
@@ -85,16 +85,15 @@ Request::e_IOReturn Request::retrieve()
 	return IO_SUCCESS;
 }
 
-Request::e_phase Request::parse(std::string buffer)
+Request::e_phase Request::parse()
 {
-	_buffer = buffer;
-	if(buffer[0] == '\0')
-		_phase = PHASE_EMPTY;
-	else
+	if (_phase == PHASE_EMPTY)
+	{
 		_phase = PHASE_START_LINE;
+	}
 	if (_phase == PHASE_START_LINE)
 	{
-		if(parseHeader(buffer))
+		if(parseHeader())
 			_phase = PHASE_HEADERS;
 	}
 	if (_phase == PHASE_HEADERS)
@@ -112,17 +111,17 @@ Request::e_phase Request::parse(std::string buffer)
 
 // --- Private --- //
 
-int Request::parseHeader(std::string buffer)
+int Request::parseHeader()
 {
 	int start;
 	start = 0;
-	while(buffer[start]!='\n')
+	while(_buffer[start]!='\n')
 		start++;
 	char line[start];
 	int i = 0;
 	while(i < start)
 	{
-		line[i] = buffer[i];
+		line[i] = _buffer[i];
 		i++;
 	}
 	t_pairStrings field = parseStartLine(line);

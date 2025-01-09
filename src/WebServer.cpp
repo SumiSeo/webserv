@@ -270,8 +270,6 @@ void handleClient(int clientFd)
 	else 
 	{
 		std::cout << "Received " << bytes_received << " bytes" << std::endl;
-		Request req(0);
-		req.parse(std::string(buffer));
 		std::cout << "Data: " << std::string(buffer, bytes_received) << std::endl;
 	}
 }
@@ -367,12 +365,15 @@ void WebServer::loop()
 						std::perror("recv");
 					shouldDisconnect = true;
 				}
-
-				Request::e_phase phase = request.parse();
-				if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
+				else
 				{
-					// TODO: Create a response for either of these 2 phases
+					Request::e_phase phase = request.parse();
+					if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
+					{
+						// TODO: Create a response for either of these 2 phases
+					}
 				}
+
 			}
 			if (!shouldDisconnect && events[i].events & EPOLLOUT)
 			{
@@ -410,7 +411,7 @@ int WebServer::createServer()
 		if (it->_configs.find("listen") != it->_configs.end())
 		{
 			listenPort = Utils::getListenPort(it->_configs.at("listen"));
-			listenAddress = Utils::getListenPort(it->_configs.at("listen"));
+			listenAddress = Utils::getListenAddress(it->_configs.at("listen"));
 			if (listenPort.empty() || listenAddress.empty())
 				throw std::runtime_error("Invalid listen values");
 			port = listenPort.c_str();

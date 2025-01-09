@@ -45,6 +45,7 @@ class WebServer
 		std::map<std::string, t_vecString> _configs;
 		std::map<std::string, Location> _locations;
 	};
+	void loop();
 
   protected:
 	/* data */
@@ -74,7 +75,6 @@ class WebServer
 		t_vecString::const_iterator end);
 	static void *get_in_addr(struct sockaddr *sa);
 	int createServer();
-	void loop();
 
 	// -- debugging functions -- //
 	void printKeyValues();

@@ -32,6 +32,7 @@ int	main(int argc, char **argv)
 	try
 	{
 		WebServer	webserver(argv[1]);
+		webserver.loop();
 	
 	}
 	catch (const std::exception &e)
