@@ -89,12 +89,11 @@ Request::e_phase Request::parse()
 {
 	if (_phase == PHASE_EMPTY)
 	{
-		_phase = PHASE_START_LINE;
+		parseStartLine();
 	}
 	if (_phase == PHASE_START_LINE)
 	{
-		if(parseHeader())
-			_phase = PHASE_HEADERS;
+		parseHeader();
 	}
 	if (_phase == PHASE_HEADERS)
 	{
@@ -113,6 +112,35 @@ Request::e_phase Request::parse()
 
 int Request::parseHeader()
 {
+	// int start;
+	// start = 0;
+	// while(_buffer[start]!='\n')
+	// 	start++;
+	// char line[start];
+	// int i = 0;
+	// while(i < start)
+	// {
+	// 	line[i] = _buffer[i];
+	// 	i++;
+	// }
+	// t_pairStrings field = parseStartLine(line);
+	// assignStartLine(field);
+	int start = 10;
+	parseHeaderDeep(start);
+
+	/* Debugging: These line belows will be deleted in the end */
+	printStartLine();
+	printRequest();
+	//
+	_phase = PHASE_HEADERS;
+
+	if(_headers.size() <= 0)
+		return 0;
+	return 1;
+}
+
+void Request::parseStartLine()
+{
 	int start;
 	start = 0;
 	while(_buffer[start]!='\n')
@@ -124,18 +152,34 @@ int Request::parseHeader()
 		line[i] = _buffer[i];
 		i++;
 	}
-	t_pairStrings field = parseStartLine(line);
-	assignStartLine(field);
-	parseHeaderDeep(start);
 
-	/* Debugging: These line belows will be deleted in the end */
-	printStartLine();
-	printRequest();
-	//
+	t_pairStrings field;
 
-	if(_headers.size() <= 0)
-		return 0;
-	return 1;
+	std::string strLine = line;
+	std::size_t pos = strLine.find('/');
+	// if (pos == string::npos)
+	// 	return field;
+
+	string fieldName = strLine.substr(0, pos);
+	string fieldValue = Utils::trimString(strLine.substr(pos + 1), HTTP_WHITESPACES);
+	field.first = Utils::uppercaseString(fieldName);
+	field.second = fieldValue;
+	
+	_startLine.method = field.first;
+	int check = 0;
+	std::string target;
+	std::string version; 
+	for(int i  = 0 ; i < field.second[i]; i ++)
+	{
+		if(field.second[i] == '/')
+		{	
+			check = i;
+			break;
+		}
+	}
+	_startLine.httpVersion = field.second.substr(check+1);
+	_startLine.requestTarget = field.second.substr(0,field.second.size()-check-1);
+	_phase = PHASE_START_LINE;
 }
 
 void Request::assignStartLine(t_pairStrings field)
@@ -312,18 +356,7 @@ Request::e_statusFunction Request::readTrailerFields()
 	return STATUS_FUNCTION_NONE;
 }
 
-Request::t_pairStrings Request::parseStartLine(string const &line)
-{
-	t_pairStrings field;
-	std::size_t pos = line.find('/');
-	if (pos == string::npos)
-		return field;
-	string fieldName = line.substr(0, pos);
-	string fieldValue = Utils::trimString(line.substr(pos + 1), HTTP_WHITESPACES);
-	field.first = Utils::uppercaseString(fieldName);
-	field.second = fieldValue;
-	return field;
-}
+
 
 
 Request::t_pairStrings Request::parseFieldLine(string const &line)
