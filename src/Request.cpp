@@ -88,13 +88,9 @@ Request::e_IOReturn Request::retrieve()
 Request::e_phase Request::parse()
 {
 	if (_phase == PHASE_EMPTY)
-	{
 		parseStartLine();
-	}
 	if (_phase == PHASE_START_LINE)
-	{
 		parseHeader();
-	}
 	if (_phase == PHASE_HEADERS)
 	{
 		parseBody();
@@ -112,19 +108,6 @@ Request::e_phase Request::parse()
 
 int Request::parseHeader()
 {
-	// int start;
-	// start = 0;
-	// while(_buffer[start]!='\n')
-	// 	start++;
-	// char line[start];
-	// int i = 0;
-	// while(i < start)
-	// {
-	// 	line[i] = _buffer[i];
-	// 	i++;
-	// }
-	// t_pairStrings field = parseStartLine(line);
-	// assignStartLine(field);
 	int start = 10;
 	parseHeaderDeep(start);
 
@@ -159,12 +142,10 @@ void Request::parseStartLine()
 	std::size_t pos = strLine.find('/');
 	// if (pos == string::npos)
 	// 	return field;
-
 	string fieldName = strLine.substr(0, pos);
 	string fieldValue = Utils::trimString(strLine.substr(pos + 1), HTTP_WHITESPACES);
 	field.first = Utils::uppercaseString(fieldName);
 	field.second = fieldValue;
-	
 	_startLine.method = field.first;
 	int check = 0;
 	std::string target;
