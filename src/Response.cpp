@@ -52,6 +52,6 @@ bool Response::isComplete() const
 Response::Response(Response const &src):
 	_buffer(src._buffer),
 	_cgiFd(src._cgiFd),
-	_responseComplete(src._responseComplete),
+	_responseComplete(src._responseComplete)
 {
 }
