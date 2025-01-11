@@ -94,9 +94,7 @@ Request::e_phase Request::parse()
 	if (_phase == PHASE_HEADERS)
 		parseBody();
 	if (_phase == PHASE_BODY)
-	{
 		_phase = PHASE_COMPLETE;
-	}
 	return _phase;
 }
 
@@ -104,42 +102,31 @@ Request::e_phase Request::parse()
 
 // --- Private --- //
 
-int Request::parseHeader()
+void Request::parseHeader()
 {
 	std::string tmp;
 	std::size_t temp = 0;
 
-	std::cout<<"HEADER BUFFER SIZE : " << _buffer.size() << std::endl;
-	while(temp < _buffer.size())
-	{	
+	while (temp < _buffer.size()) {	
 		while (temp < _buffer.size() && (_buffer[temp] == '\r' || _buffer[temp] == '\n'))
-            ++temp;
+			++temp;
 		std::size_t end = _buffer.find("\r\n", temp);
-        if (end == std::string::npos)
-            break; 
-
-        std::string line = _buffer.substr(temp, end - temp);
-		// _buffer.erase (temp, end-temp);
-        temp = end + 1; 
-        t_pairStrings field = parseFieldLine(line);
-        _headers.insert(field);
-    }
+		if (end == std::string::npos)
+			break; 
+   		 std::string line = _buffer.substr(temp, end - temp);
+   		 t_pairStrings field = parseFieldLine(line);
+    	_headers.insert(field);
+   		_buffer.erase(temp, (end - temp) + 2); 
+}
 
 	/* Debugging: These line belows will be deleted in the end */
 	printStartLine();
 	printRequest();
-	//
 	_phase = PHASE_HEADERS;
-
-	std::cout<<"HEADER BUFFER SIZE  2 : " << _buffer.size() << std::endl;
-
-	return 1;
 }
 
 void Request::parseStartLine()
 {
-		std::cout<<"STARTLINE BUFFER SIZE  1 : " << _buffer.size() << std::endl;
-
 	int start;
 	start = 0;
 	while(_buffer[start]!='\n')
@@ -176,7 +163,6 @@ void Request::parseStartLine()
 	_startLine.httpVersion = field.second.substr(check+1);
 	_startLine.requestTarget = field.second.substr(0,field.second.size()-check-1);
 	_phase = PHASE_START_LINE;
-			std::cout<<"STARTLINE BUFFER SIZE  2 : " << _buffer.size() << std::endl;
 
 }
 

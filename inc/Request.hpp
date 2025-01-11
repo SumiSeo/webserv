@@ -83,8 +83,9 @@ class Request
 
 	/* Methods */
 	// -- Utils Functions -- //
+	void parseStartLine();
+	void parseHeader();
 	void parseBody();
-	int parseHeader();
 
 	e_statusFunction readChunkSize();
 	e_statusFunction readChunkData();
@@ -96,9 +97,6 @@ class Request
 	 * If an error occurs, it returns a pair of key-value that are empties.
 	 */
 	t_pairStrings parseFieldLine(std::string const &line);
-	void parseStartLine();
-	void assignStartLine(t_pairStrings field);
-	void parseHeaderDeep( int start);
 	
 	e_statusFunction readBodyContent(char const contentLength[]);
 
