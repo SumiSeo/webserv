@@ -18,9 +18,13 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 
 	std::cout<<"Response constructor called" << std::endl;
 	(void)configs;
-	if(!isError(request))
+	if(isError(request))
 	{
-		std::cout<<"THERE IS NO ERROR"<<std::endl;
+		std::cout<<"THERE IS ERROR"<<std::endl;
+	}
+	if(isCGI(request))
+	{
+		std::cout<<"IS IT CGI ? "<<std::endl;
 	}
 	// if request is valid and doesn't require a cgi, create a response that answer the request
 	// if request is invalid, create a response with the error code
@@ -77,7 +81,22 @@ Response::Response(Response const &src):
 
 bool Response::isError(Request const &request)
 {
-	request.getPhase();
-	request.getStatusCode();
-    return false;
+	if(request.getPhase() == Request::PHASE_ERROR)
+	{
+		std::cout<<"Phase error"<< request.getPhase()<<std::endl;
+		  return true;
+	}
+	if(request.getStatusCode()!= VALID && request.getStatusCode() >1 )
+	{
+	   std::cout<<"status code error"<<request.getStatusCode()<<std::endl;
+	  return true;
+	}
+	return false;
+}
+
+int Response::isCGI(Request const &request)
+{
+(void)request;
+std::cout<<"is cgi called"<<std::endl;
+ return 1;
 }

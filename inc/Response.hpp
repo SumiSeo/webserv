@@ -55,7 +55,7 @@ class Response
 	bool isError(Request const &request);
 
 	//extension check to know if it is static or cgi .html or .py/ .php
-	int isCGI();
+	int isCGI(Request const &request);
 
 
 
