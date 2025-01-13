@@ -51,7 +51,6 @@ Request::Request(int fd):
 	_phase(PHASE_EMPTY),
 	_statusCode(NONE)
 {
-	std::cout<<"*****************TESTREQUEST***********"<<std::endl;
 }
 
 Request::~Request()
