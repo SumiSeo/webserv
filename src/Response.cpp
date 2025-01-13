@@ -88,8 +88,8 @@ char **Response::headersToEnv(t_mapStrings const &headers) const
 		if (envp[i] == NULL)
 		{
 			for (std::size_t j = 0; j < i; ++j)
-				free(envp[i]);
-			free(envp);
+				delete envp[j];
+			delete[] envp;
 			return NULL;
 		}
 		std::memcpy(envp[i], environmentVariable.c_str(), environmentVariable.size() + 1);
