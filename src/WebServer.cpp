@@ -10,6 +10,7 @@
 
 #include "WebServer.hpp"
 #include "Request.hpp"
+#include "Response.hpp"
 
 using std::cerr;
 using std::endl;
@@ -352,7 +353,6 @@ void WebServer::loop()
 						continue;
 					}
 					_requests[clientFd] = Request(clientFd);
-					//handleClient(clientFd);
 					continue;
 				}
 
@@ -370,7 +370,13 @@ void WebServer::loop()
 					Request::e_phase phase = request.parse();
 					if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
 					{
+						_responses[fd] = Response(request, _servers[0]);
+						
 						// TODO: Create a response for either of these 2 phases
+						// we will create a map for response 
+						// int fd of request 
+						// key = int (fd), value = Response class
+
 					}
 				}
 

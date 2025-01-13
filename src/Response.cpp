@@ -10,7 +10,7 @@ Response::Response():
 {
 }
 
-Response::Response(Request const &request, vector<WebServer::Server> const &configs):
+Response::Response(Request const &request, WebServer::Server const &configs):
 	_cgiFd(-1),
 	_responseComplete(false)
 {

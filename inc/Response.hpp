@@ -13,7 +13,8 @@ class Response
   public:
 	/* Methods */
 	Response();
-	Response(Request const &request, std::vector<WebServer::Server> const &configs);
+	Response(Response const &src);
+	Response(Request const &request, WebServer::Server const &config);
 	~Response();
 
 	Response &operator=(Response const &rhs);
@@ -34,7 +35,6 @@ class Response
 	bool _responseComplete;
 
 	/* Methods */
-	Response(Response const &src);
 };
 
 #endif

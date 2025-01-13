@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <sys/epoll.h>
 
+class Response;
+
 #define BUF_SIZE 500
 #define MAX_CLIENTS 10
 
@@ -55,6 +57,7 @@ class WebServer
 	std::set<int> _socketFds;
 	int _epollFd;
 	std::map<int, Request> _requests;
+	std::map<int, Response> _responses;
 
 	/* Methods */
 	WebServer();

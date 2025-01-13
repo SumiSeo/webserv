@@ -51,7 +51,6 @@ Request::Request(int fd):
 	_phase(PHASE_EMPTY),
 	_statusCode(NONE)
 {
-	std::cout<<"*****************TESTREQUEST***********"<<std::endl;
 }
 
 Request::~Request()
@@ -92,34 +91,52 @@ Request::e_phase Request::parse()
 	if (_phase == PHASE_START_LINE)
 		parseHeader();
 	if (_phase == PHASE_HEADERS)
-	{
 		parseBody();
-	}
 	if (_phase == PHASE_BODY)
-	{
 		_phase = PHASE_COMPLETE;
-	}
 	return _phase;
 }
 
 
 
+Request::StartLine const &Request::getStartLine() const
+{
+	return _startLine;
+}
+
+Request::t_mapString const &Request::getHeaders() const
+{
+	return _headers;
+}
+
+std::string const &Request::getBody() const
+{
+	return _body.data;
+}
+
 // --- Private --- //
 
-int Request::parseHeader()
+void Request::parseHeader()
 {
-	int start = 10;
-	parseHeaderDeep(start);
+	std::string tmp;
+	std::size_t temp = 0;
+
+	while (temp < _buffer.size()) {	
+		while (temp < _buffer.size() && (_buffer[temp] == '\r' || _buffer[temp] == '\n'))
+			++temp;
+		std::size_t end = _buffer.find("\r\n", temp);
+		if (end == std::string::npos)
+			break; 
+   		 std::string line = _buffer.substr(temp, end - temp);
+   		 t_pairStrings field = parseFieldLine(line);
+    	_headers.insert(field);
+   		_buffer.erase(temp, (end - temp) + 2); 
+}
 
 	/* Debugging: These line belows will be deleted in the end */
 	printStartLine();
 	printRequest();
-	//
 	_phase = PHASE_HEADERS;
-
-	if(_headers.size() <= 0)
-		return 0;
-	return 1;
 }
 
 void Request::parseStartLine()
@@ -135,13 +152,12 @@ void Request::parseStartLine()
 		line[i] = _buffer[i];
 		i++;
 	}
+	_buffer.erase (_buffer.begin(),_buffer.begin() + i);
 
 	t_pairStrings field;
 
 	std::string strLine = line;
-	std::size_t pos = strLine.find('/');
-	// if (pos == string::npos)
-	// 	return field;
+	std::size_t pos = strLine.find('/'); // GET index.html HTTP/1.1
 	string fieldName = strLine.substr(0, pos);
 	string fieldValue = Utils::trimString(strLine.substr(pos + 1), HTTP_WHITESPACES);
 	field.first = Utils::uppercaseString(fieldName);
@@ -161,45 +177,9 @@ void Request::parseStartLine()
 	_startLine.httpVersion = field.second.substr(check+1);
 	_startLine.requestTarget = field.second.substr(0,field.second.size()-check-1);
 	_phase = PHASE_START_LINE;
+
 }
 
-void Request::assignStartLine(t_pairStrings field)
-{
-	_startLine.method = field.first;
-	int check = 0;
-	std::string target;
-	std::string version; 
-	for(int i  = 0 ; i < field.second[i]; i ++)
-	{
-		if(field.second[i] == '/')
-		{	
-			check = i;
-			break;
-		}
-	}
-	_startLine.httpVersion = field.second.substr(check+1);
-	_startLine.requestTarget = field.second.substr(0,field.second.size()-check-1);
-}
-
-void Request::parseHeaderDeep(int start)
-{
-	std::string tmp;
-	std::size_t temp = start;
-
-	while(temp < _buffer.size())
-	{	
-		while (temp < _buffer.size() && (_buffer[temp] == '\r' || _buffer[temp] == '\n'))
-            ++temp;
-		std::size_t end = _buffer.find("\r\n", temp);
-        if (end == std::string::npos)
-            break; 
-
-        std::string line = _buffer.substr(temp, end - temp);
-        temp = end + 1; 
-        t_pairStrings field = parseFieldLine(line);
-        _headers.insert(field);
-    }
-}
 
 
 Request::MessageBody::MessageBody():

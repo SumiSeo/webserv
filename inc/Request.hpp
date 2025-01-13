@@ -10,6 +10,30 @@
 class Request
 {
   public:
+	/* Typedefs */
+	typedef std::map<std::string, std::string> t_mapString;
+	typedef std::pair<std::string, std::string> t_pairStrings;
+
+	/* New Variable Types */
+	struct StartLine
+	{
+		std::string method;
+		std::string requestTarget;
+		std::string httpVersion;
+	};
+	class MessageBody
+	{
+	  public:
+		MessageBody();
+		MessageBody(MessageBody const &src);
+		~MessageBody();
+
+		MessageBody &operator=(MessageBody const &rhs);
+
+		std::string data;
+		std::size_t len;
+		bool chunkCompleted;
+	};
 	/* New Variable Types */
 	enum e_IOReturn
 	{
@@ -39,33 +63,13 @@ class Request
 	e_IOReturn retrieve();
 	e_phase parse();
 
+	StartLine const &getStartLine() const;
+	t_mapString const &getHeaders() const;
+	std::string const &getBody() const;
+
   protected:
 
   private:
-	/* Typedefs */
-	typedef std::map<std::string, std::string> t_mapString;
-	typedef std::pair<std::string, std::string> t_pairStrings;
-
-	/* New Variable Types */
-	struct StartLine
-	{
-		std::string method;
-		std::string requestTarget;
-		std::string httpVersion;
-	};
-	class MessageBody
-	{
-	  public:
-		MessageBody();
-		MessageBody(MessageBody const &src);
-		~MessageBody();
-
-		MessageBody &operator=(MessageBody const &rhs);
-
-		std::string data;
-		std::size_t len;
-		bool chunkCompleted;
-	};
 	enum e_statusFunction
 	{
 		STATUS_FUNCTION_NONE,
@@ -83,8 +87,9 @@ class Request
 
 	/* Methods */
 	// -- Utils Functions -- //
+	void parseStartLine();
+	void parseHeader();
 	void parseBody();
-	int parseHeader();
 
 	e_statusFunction readChunkSize();
 	e_statusFunction readChunkData();
@@ -96,9 +101,6 @@ class Request
 	 * If an error occurs, it returns a pair of key-value that are empties.
 	 */
 	t_pairStrings parseFieldLine(std::string const &line);
-	void parseStartLine();
-	void assignStartLine(t_pairStrings field);
-	void parseHeaderDeep( int start);
 	
 	e_statusFunction readBodyContent(char const contentLength[]);
 
