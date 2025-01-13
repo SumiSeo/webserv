@@ -143,7 +143,7 @@ void Request::parseStartLine()
 	t_pairStrings field;
 
 	std::string strLine = line;
-	std::size_t pos = strLine.find('/');
+	std::size_t pos = strLine.find('/'); // GET index.html HTTP/1.1
 	string fieldName = strLine.substr(0, pos);
 	string fieldValue = Utils::trimString(strLine.substr(pos + 1), HTTP_WHITESPACES);
 	field.first = Utils::uppercaseString(fieldName);
