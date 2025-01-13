@@ -373,9 +373,6 @@ void WebServer::loop()
 						_responses[fd] = Response(request, _servers[0]);
 						
 						// TODO: Create a response for either of these 2 phases
-						// we will create a map for response 
-						// int fd of request 
-						// key = int (fd), value = Response class
 
 					}
 				}

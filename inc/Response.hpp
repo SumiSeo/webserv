@@ -24,6 +24,9 @@ class Response
 	std::string &getResponse();
 	bool isComplete() const;
 
+	std::string createResponseLine(e_statusCode code, std::string const & reason = "");
+	std::string getDefaultHeaders();
+
   protected:
 
   private:
@@ -35,6 +38,7 @@ class Response
 	bool _responseComplete;
 
 	/* Methods */
+
 };
 
 #endif

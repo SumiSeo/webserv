@@ -48,6 +48,18 @@ bool Response::isComplete() const
 	return _responseComplete;
 }
 
+std::string Response::createResponseLine(e_statusCode code, std::string const & reason)
+{
+(void)code;
+(void)reason;
+return "hi";
+}
+
+std::string Response::getDefaultHeaders()
+{
+return "bye";
+}
+
 // --- Private Methods --- //
 Response::Response(Response const &src):
 	_buffer(src._buffer),
