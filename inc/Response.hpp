@@ -35,6 +35,8 @@ class Response
 	bool _responseComplete;
 
 	/* Methods */
+	std::string getFileContent(std::string const &pathname) const;
+	char **headersToEnv(t_mapStrings const &headers) const;
 };
 
 #endif
