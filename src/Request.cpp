@@ -114,6 +114,17 @@ std::string const &Request::getBody() const
 	return _body.data;
 }
 
+e_statusCode Request::getStatusCode() const
+{
+	return _statusCode;
+}
+
+Request::e_phase Request::getPhase() const
+{
+	return _phase;
+} 
+
+
 // --- Private --- //
 
 void Request::parseHeader()

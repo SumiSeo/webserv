@@ -66,6 +66,8 @@ class Request
 	StartLine const &getStartLine() const;
 	t_mapString const &getHeaders() const;
 	std::string const &getBody() const;
+	e_statusCode getStatusCode() const;
+	e_phase getPhase() const; 
 
   protected:
 
