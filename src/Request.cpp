@@ -100,6 +100,21 @@ Request::e_phase Request::parse()
 
 
 
+Request::StartLine const &Request::getStartLine() const
+{
+	return _startLine;
+}
+
+Request::t_mapString const &Request::getHeaders() const
+{
+	return _headers;
+}
+
+std::string const &Request::getBody() const
+{
+	return _body.data;
+}
+
 // --- Private --- //
 
 void Request::parseHeader()
