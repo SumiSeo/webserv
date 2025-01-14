@@ -96,7 +96,7 @@ bool Response::isError(Request const &request)
 
 int Response::isCGI(Request const &request)
 {
-(void)request;
-std::cout<<"is cgi called"<<std::endl;
- return 1;
+	std::cout<<"is cgi called : "<<request.getStartLine().requestTarget<<std::endl;
+
+	return 1;
 }
