@@ -26,9 +26,7 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	{
 		std::cout<<"IS IT CGI ? "<<std::endl;
 	}
-	// if request is valid and doesn't require a cgi, create a response that answer the request
-	// if request is invalid, create a response with the error code
-	// if request needs a cgi, create a fork to launch the cgi
+	createResponseLine(request.getStatusCode());
 }
 
 Response::~Response()
@@ -60,10 +58,10 @@ bool Response::isComplete() const
 
 std::string Response::createResponseLine(e_statusCode code, std::string const & reason)
 {
-	std::cout<<"Create responseline called"<<std::endl;
-(void)code;
-(void)reason;
-return "hi";
+	std::cout<<"Create responseline struct called"<<std::endl;
+	(void)code;
+	(void)reason;
+	return "hi";
 }
 
 std::string Response::getDefaultHeaders()
@@ -101,7 +99,14 @@ int Response::isCGI(Request const &request)
 	std::string php = ".php";
 	std::cout<<targetExten<<std::endl;
 	if(strstr(targetExten.c_str(),py.c_str()) || strstr(targetExten.c_str(), php.c_str()))
+	{
+		//should response with cgi call
 		std::cout<<"is cgi called : "<< targetExten <<std::endl;
+	}
+	else
+	{
+		// should response with normal static call 
+	}
 	
 	return 1;
 }

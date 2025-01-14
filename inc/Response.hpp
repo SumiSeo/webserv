@@ -31,6 +31,9 @@ class Response
 	// if all response functionality is done or not , it is returing true or false
 	bool isComplete() const;
 
+
+
+
 	// it is for creating status-line of response
 	std::string createResponseLine(e_statusCode code, std::string const & reason = "");
 
@@ -47,14 +50,11 @@ class Response
 	std::string _buffer;
 	int _cgiFd;
 	bool _responseComplete;
+	
+	//response line
 
 	/* Methods */
-
-	
-	//check phase and status
 	bool isError(Request const &request);
-
-	//extension check to know if it is static or cgi .html or .py/ .php
 	int isCGI(Request const &request);
 
 
