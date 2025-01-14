@@ -26,7 +26,8 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	{
 		std::cout<<"IS IT CGI ? "<<std::endl;
 	}
-	createResponseLine(request.getStatusCode());
+	createResponseLine(request);
+	getDefaultHeaders(request);
 }
 
 Response::~Response()
@@ -56,17 +57,33 @@ bool Response::isComplete() const
 	return _responseComplete;
 }
 
-std::string Response::createResponseLine(e_statusCode code, std::string const & reason)
+Response::ResponseLine Response::createResponseLine(Request const &request, std::string const & reason)
 {
-	std::cout<<"Create responseline struct called"<<std::endl;
-	(void)code;
-	(void)reason;
-	return "hi";
+	_responseLine.statusCode = request.getStatusCode();
+	_responseLine.reasonPhrase = reason;
+	_responseLine.httpVersion = request.getStartLine().httpVersion;
+
+	std::cout << "response code :" << _responseLine.statusCode <<std::endl;
+	std::cout << "response reason :" << _responseLine.reasonPhrase <<std::endl;
+	std::cout << "response httpVersion :" << _responseLine.httpVersion <<std::endl;
+	return _responseLine;
 }
 
-std::string Response::getDefaultHeaders()
+std::string Response::getDefaultHeaders(Request const &request)
 {
-return "bye";
+	//ft_webvserv/1.0\r\ndate: [insert the date with this format]\r\nage: 0\r\n".
+
+	// HTTP/1.1 200
+	// Content-Type: text/html
+	// Date: Tue, 29 Oct 2024 16:56:32 GMT
+	time_t timestamp;
+	time(&timestamp);
+std::cout<<"time stamp "<< timestamp <<std::endl; 
+	std::string server = "ft_webserv";
+	std::string version = "/" + request.getStartLine().httpVersion;
+	std::string url = server.append(version) + "\r\n";
+	std::cout<<"url check : " << url<<std::endl; 
+	return "bye";
 }
 
 // --- Private Methods --- //

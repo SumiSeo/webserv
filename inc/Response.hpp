@@ -5,6 +5,7 @@
 # include <string>
 # include <vector>
 # include <iostream>
+# include <ctime>
 
 # include "Request.hpp"
 # include "WebServer.hpp"
@@ -20,6 +21,14 @@ class Response
 
 	Response &operator=(Response const &rhs);
 
+
+	struct ResponseLine 
+	{
+		std::string httpVersion;
+		int statusCode;
+		std::string reasonPhrase;
+	};
+
 	// Main Methods
 
 	//this function is checking if it returns -1 or fd
@@ -31,15 +40,10 @@ class Response
 	// if all response functionality is done or not , it is returing true or false
 	bool isComplete() const;
 
-
-
-
-	// it is for creating status-line of response
-	std::string createResponseLine(e_statusCode code, std::string const & reason = "");
-
-	// "hard code" headers 
+	ResponseLine createResponseLine(Request const &request, std::string const & reason = "");
+	
 	// Server: ft_webvserv/1.0\r\ndate: [insert the date with this format]\r\nage: 0\r\n".
-	std::string getDefaultHeaders();
+	std::string getDefaultHeaders(Request const &request);
 
   protected:
 
@@ -50,9 +54,9 @@ class Response
 	std::string _buffer;
 	int _cgiFd;
 	bool _responseComplete;
+	ResponseLine _responseLine;
+	std::string _headers;
 	
-	//response line
-
 	/* Methods */
 	bool isError(Request const &request);
 	int isCGI(Request const &request);
