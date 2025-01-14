@@ -83,7 +83,7 @@ char **Response::headersToEnv(t_mapStrings const &headers) const
 	std::size_t i = 0;
 	for (t_mapStrings::const_iterator it = headers.begin(); it != headers.end(); ++it)
 	{
-		string environmentVariable = it->first + '=' + it->second;
+		string environmentVariable = "HTTP_" + it->first + '=' + it->second;
 		envp[i] = new(std::nothrow) char[environmentVariable.size() + 1];
 		if (envp[i] == NULL)
 		{
