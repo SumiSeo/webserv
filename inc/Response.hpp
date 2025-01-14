@@ -5,7 +5,11 @@
 # include <string>
 # include <vector>
 # include <iostream>
-# include <ctime>
+#include <stdio.h>
+#include <ctime>
+#include <iostream>
+#include <memory>
+#include <string>
 
 # include "Request.hpp"
 # include "WebServer.hpp"

@@ -76,9 +76,20 @@ std::string Response::getDefaultHeaders(Request const &request)
 	// HTTP/1.1 200
 	// Content-Type: text/html
 	// Date: Tue, 29 Oct 2024 16:56:32 GMT
-	time_t timestamp;
-	time(&timestamp);
-std::cout<<"time stamp "<< timestamp <<std::endl; 
+	time_t now;
+	time(&now);
+	std::cout<<"time stamp "<< now <<std::endl; 
+
+	tm *ltm = localtime(&now);
+
+    char formatted[100];
+	std::strftime(formatted, sizeof(formatted), "%a, %d %b %Y %H:%M:%S ", ltm);
+	std::string formattedDate = formatted;
+	std::string formattedGMT = formattedDate.append("GMT");
+
+	std::cout  << formatted<<std::endl;
+	std::cout  << formattedGMT<<std::endl;
+
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
 	std::string url = server.append(version) + "\r\n";
