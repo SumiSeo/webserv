@@ -355,31 +355,36 @@ void WebServer::loop()
 					_requests[clientFd] = Request(clientFd);
 					continue;
 				}
-
-				Request &request = _requests[fd];
-
-				Request::e_IOReturn recvReturn = request.retrieve();
-				if (recvReturn == Request::IO_ERROR || recvReturn == Request::IO_DISCONNECT)
+				else if (_requests.find(fd) != _requests.end())
 				{
-					if (recvReturn == Request::IO_ERROR)
-						std::perror("recv");
-					shouldDisconnect = true;
-				}
-				else
-				{
-					Request::e_phase phase = request.parse();
-					if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
+					Request &request = _requests[fd];
+
+					Request::e_IOReturn recvReturn = request.retrieve();
+					if (recvReturn == Request::IO_ERROR || recvReturn == Request::IO_DISCONNECT)
 					{
-						_responses[fd] = Response(request, _servers[0]);
-						
-						// TODO: Create a response for either of these 2 phases
-						// we will create a map for response 
-						// int fd of request 
-						// key = int (fd), value = Response class
+						if (recvReturn == Request::IO_ERROR)
+							std::perror("recv");
+						shouldDisconnect = true;
+					}
+					else
+					{
+						Request::e_phase phase = request.parse();
+						if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
+						{
+							_responses[fd] = Response(request, _servers[0]);
+							
+							// TODO: Create a response for either of these 2 phases
+							// we will create a map for response 
+							// int fd of request 
+							// key = int (fd), value = Response class
 
+						}
 					}
 				}
-
+				else if (_cgiFdToResponseFd.find(fd) != _cgiFdToResponseFd)
+				{
+					Response &response = _responses[_cgiFdToResponseFd[fd]];
+				}
 			}
 			if (!shouldDisconnect && events[i].events & EPOLLOUT)
 			{

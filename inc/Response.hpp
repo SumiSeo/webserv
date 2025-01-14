@@ -35,6 +35,7 @@ class Response
 	bool _responseComplete;
 
 	/* Methods */
+	bool handleCGI(Request const &request, WebServer::Server const &config, std::string const &pathname);
 };
 
 #endif
