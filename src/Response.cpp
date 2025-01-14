@@ -96,7 +96,12 @@ bool Response::isError(Request const &request)
 
 int Response::isCGI(Request const &request)
 {
-	std::cout<<"is cgi called : "<<request.getStartLine().requestTarget<<std::endl;
-
+	std::string targetExten = request.getStartLine().requestTarget;
+	std::string py = ".py";
+	std::string php = ".php";
+	std::cout<<targetExten<<std::endl;
+	if(strstr(targetExten.c_str(),py.c_str()) || strstr(targetExten.c_str(), php.c_str()))
+		std::cout<<"is cgi called : "<< targetExten <<std::endl;
+	
 	return 1;
 }
