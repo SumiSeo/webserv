@@ -86,10 +86,8 @@ std::string Response::getDefaultHeaders(Request const &request)
 	std::strftime(formatted, sizeof(formatted), "%a, %d %b %Y %H:%M:%S ", ltm);
 	std::string formattedDate = formatted;
 	std::string formattedGMT = formattedDate.append("GMT");
-
 	std::cout  << formatted<<std::endl;
 	std::cout  << formattedGMT<<std::endl;
-
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
 	std::string url = server.append(version) + "\r\n";
@@ -110,12 +108,12 @@ bool Response::isError(Request const &request)
 	if(request.getPhase() == Request::PHASE_ERROR)
 	{
 		std::cout<<"Phase error"<< request.getPhase()<<std::endl;
-		  return true;
+		return true;
 	}
 	if(request.getStatusCode()!= VALID && request.getStatusCode() >1 )
 	{
 	   std::cout<<"status code error"<<request.getStatusCode()<<std::endl;
-	  return true;
+	   return true;
 	}
 	return false;
 }
