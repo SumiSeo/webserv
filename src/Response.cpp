@@ -34,8 +34,9 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	{
 		//if it is not cgi static response should be sent to client
 	}
-	createResponseLine(request);
-	getDefaultHeaders(request);
+	std::string responseLine = createResponseLine(request);
+	std::string responseHeaaders = getDefaultHeaders(request);
+	std::string hi = getFileContent("web/www/index.html");
 }
 
 Response::~Response()
@@ -65,14 +66,21 @@ bool Response::isComplete() const
 	return _responseComplete;
 }
 
-void Response::createResponseLine(Request const &request, std::string const & reason)
+std::string Response::createResponseLine(Request const &request, std::string const & reason)
 {
-	_responseLine.statusCode = request.getStatusCode();
+	Request::e_phase phase = request.getPhase();
+	if(phase == Request::PHASE_COMPLETE)
+		_responseLine.statusCode = "200";
+	else if(phase == Request::PHASE_ERROR)
+		_responseLine.statusCode = "404";
 	_responseLine.reasonPhrase = reason;
-	_responseLine.httpVersion = request.getStartLine().httpVersion;
+	_responseLine.httpVersion = "HTTP/1.1";
+
+	std::string responseLine = _responseLine.httpVersion + " " + _responseLine.statusCode + " " + _responseLine.reasonPhrase + "\r\n";
+	return responseLine;
 }
 
-void Response::getDefaultHeaders(Request const &request)
+std::string Response::getDefaultHeaders(Request const &request)
 {
 	time_t now;
 	time(&now);
@@ -83,8 +91,8 @@ void Response::getDefaultHeaders(Request const &request)
 	std::string formattedGMT = formattedDate.append("GMT");
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
-	std::string url = server.append(version) + "\r\n" + formattedGMT + "\r\n" + "age: 0" + "\r\n";
-	_headers = url;
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
+	return url;
 }
 
 // --- Private Methods --- //
@@ -126,6 +134,8 @@ int Response::isCGI(Request const &request)
 	return 0;
 	
 }
+
+// /board/www/abc/index.html 
 string Response::getFileContent(string const &pathname) const
 {
 	ifstream input(pathname.c_str());

@@ -132,6 +132,11 @@ Request::e_phase Request::getPhase() const
 	return _phase;
 } 
 
+int Request::getFd()
+{
+	return _fd;
+}
+
 
 // --- Private --- //
 

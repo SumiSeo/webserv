@@ -29,7 +29,7 @@ class Response
 	struct ResponseLine 
 	{
 		std::string httpVersion;
-		int statusCode;
+		std::string statusCode;
 		std::string reasonPhrase;
 	};
 
@@ -37,9 +37,9 @@ class Response
 	std::string &getResponse();
 	bool isComplete() const;
 
-	void createResponseLine(Request const &request, std::string const & reason = "");
+	std::string createResponseLine(Request const &request, std::string const & reason = "");
 	
-	void getDefaultHeaders(Request const &request);
+	std::string getDefaultHeaders(Request const &request);
 
   protected:
 
@@ -51,7 +51,6 @@ class Response
 	int _cgiFd;
 	bool _responseComplete;
 	ResponseLine _responseLine;
-	std::string _headers;
 	
 	/* Methods */
 	bool isError(Request const &request);
