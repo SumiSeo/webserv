@@ -1,6 +1,13 @@
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <sstream>
+
 #include "Response.hpp"
 
+using std::ifstream;
 using std::string;
+using std::stringstream;
 using std::vector;
 
 // --- Public Methods --- //
@@ -118,4 +125,39 @@ int Response::isCGI(Request const &request)
 	}
 	return 0;
 	
+}
+string Response::getFileContent(string const &pathname) const
+{
+	ifstream input(pathname.c_str());
+	if (!input.is_open())
+		return string();
+	stringstream content;
+	content << input.rdbuf();
+	return content.str();
+}
+
+char **Response::headersToEnv(t_mapStrings const &headers) const
+{
+	std::size_t len = headers.size();
+	char **envp = new(std::nothrow) char*[len + 1];
+	if (envp == NULL)
+		return envp;
+
+	std::size_t i = 0;
+	for (t_mapStrings::const_iterator it = headers.begin(); it != headers.end(); ++it)
+	{
+		string environmentVariable = "HTTP_" + it->first + '=' + it->second;
+		envp[i] = new(std::nothrow) char[environmentVariable.size() + 1];
+		if (envp[i] == NULL)
+		{
+			for (std::size_t j = 0; j < i; ++j)
+				delete envp[j];
+			delete[] envp;
+			return NULL;
+		}
+		std::memcpy(envp[i], environmentVariable.c_str(), environmentVariable.size() + 1);
+		++i;
+	}
+	envp[i] = NULL;
+	return envp;
 }

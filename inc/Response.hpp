@@ -56,11 +56,8 @@ class Response
 	/* Methods */
 	bool isError(Request const &request);
 	int isCGI(Request const &request);
-
-
-
-
-
+	std::string getFileContent(std::string const &pathname) const;
+	char **headersToEnv(t_mapStrings const &headers) const;
 };
 
 #endif
