@@ -14,9 +14,6 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	_cgiFd(-1),
 	_responseComplete(false)
 {
-
-
-	std::cout<<"Response constructor called" << std::endl;
 	(void)configs;
 	if(isError(request))
 	{
@@ -28,10 +25,10 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	}
 	else
 	{
-		
+		//if it is not cgi static response should be sent to client
 	}
-	std::string responseLine = createResponseLine(request);
-	std::string headers = getDefaultHeaders(request);
+	createResponseLine(request);
+	getDefaultHeaders(request);
 }
 
 Response::~Response()
@@ -61,15 +58,14 @@ bool Response::isComplete() const
 	return _responseComplete;
 }
 
-Response::ResponseLine Response::createResponseLine(Request const &request, std::string const & reason)
+void Response::createResponseLine(Request const &request, std::string const & reason)
 {
 	_responseLine.statusCode = request.getStatusCode();
 	_responseLine.reasonPhrase = reason;
 	_responseLine.httpVersion = request.getStartLine().httpVersion;
-	return _responseLine;
 }
 
-std::string Response::getDefaultHeaders(Request const &request)
+void Response::getDefaultHeaders(Request const &request)
 {
 	time_t now;
 	time(&now);
@@ -81,7 +77,7 @@ std::string Response::getDefaultHeaders(Request const &request)
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
 	std::string url = server.append(version) + "\r\n" + formattedGMT + "\r\n" + "age: 0" + "\r\n";
-	return url;
+	_headers = url;
 }
 
 // --- Private Methods --- //
@@ -117,11 +113,9 @@ int Response::isCGI(Request const &request)
 	{
 		//should response with cgi call
 		std::cout<<"is cgi called : "<< targetExten <<std::endl;
+		return 1;
+
 	}
-	else
-	{
-		// should response with normal static call 
-	}
+	return 0;
 	
-	return 1;
 }

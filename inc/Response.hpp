@@ -33,21 +33,13 @@ class Response
 		std::string reasonPhrase;
 	};
 
-	// Main Methods
-
-	//this function is checking if it returns -1 or fd
 	int const &getFdCGI() const;
-
-	// It returns _buffer(response)
 	std::string &getResponse();
-
-	// if all response functionality is done or not , it is returing true or false
 	bool isComplete() const;
 
-	ResponseLine createResponseLine(Request const &request, std::string const & reason = "");
+	void createResponseLine(Request const &request, std::string const & reason = "");
 	
-	// Server: ft_webvserv/1.0\r\ndate: [insert the date with this format]\r\nage: 0\r\n".
-	std::string getDefaultHeaders(Request const &request);
+	void getDefaultHeaders(Request const &request);
 
   protected:
 
