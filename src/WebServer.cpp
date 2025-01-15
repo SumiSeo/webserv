@@ -377,7 +377,6 @@ void WebServer::loop()
 							// we will create a map for response 
 							// int fd of request 
 							// key = int (fd), value = Response class
-
 						}
 					}
 				}
