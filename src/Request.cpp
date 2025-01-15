@@ -122,6 +122,17 @@ std::string const &Request::getBody() const
 	return _body.data;
 }
 
+e_statusCode Request::getStatusCode() const
+{
+	return _statusCode;
+}
+
+Request::e_phase Request::getPhase() const
+{
+	return _phase;
+} 
+
+
 // --- Private --- //
 
 void Request::parseHeader()
@@ -149,43 +160,20 @@ void Request::parseHeader()
 
 void Request::parseStartLine()
 {
-	int start;
-	start = 0;
-	while(_buffer[start]!='\n')
-		start++;
-	char line[start];
-	int i = 0;
-	while(i < start)
+	size_t start = _buffer.find("\n");
+	std::string line;
+	if (start != std::string::npos)
 	{
-		line[i] = _buffer[i];
-		i++;
+		 std::string tmpLine(_buffer.begin(), _buffer.begin() + start);
+		_buffer.erase(_buffer.begin(), _buffer.begin() + start + 1); 
+		line = tmpLine;
 	}
-	_buffer.erase (_buffer.begin(),_buffer.begin() + i);
-
-	t_pairStrings field;
-
-	std::string strLine = line;
-	std::size_t pos = strLine.find('/'); // GET index.html HTTP/1.1
-	string fieldName = strLine.substr(0, pos);
-	string fieldValue = Utils::trimString(strLine.substr(pos + 1), HTTP_WHITESPACES);
-	field.first = Utils::uppercaseString(fieldName);
-	field.second = fieldValue;
-	_startLine.method = field.first;
-	int check = 0;
-	std::string target;
-	std::string version; 
-	for(int i  = 0 ; i < field.second[i]; i ++)
-	{
-		if(field.second[i] == '/')
-		{	
-			check = i;
-			break;
-		}
-	}
-	_startLine.httpVersion = field.second.substr(check+1);
-	_startLine.requestTarget = field.second.substr(0,field.second.size()-check-1);
+	size_t targetPos = line.find("/");
+	size_t targetPosEnd = line.find("H");
+	_startLine.method = line.substr(0,targetPos - 1);
+	_startLine.requestTarget = line.substr(targetPos, targetPosEnd  - targetPos - 1 );
+	_startLine.httpVersion = line.substr(targetPosEnd);
 	_phase = PHASE_START_LINE;
-
 }
 
 
