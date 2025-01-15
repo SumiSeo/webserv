@@ -373,6 +373,8 @@ string Utils::uppercaseString(string const &input)
 
 int Utils::toupper(char c)
 {
+	if (c == '-')
+		return '_';
 	return std::toupper(static_cast<unsigned char>(c));
 }
 

@@ -380,9 +380,17 @@ void WebServer::loop()
 						}
 					}
 				}
-				else if (_cgiFdToResponseFd.find(fd) != _cgiFdToResponseFd)
+				else if (_cgiFdToResponseFd.find(fd) != _cgiFdToResponseFd.end())
 				{
-					Response &response = _responses[_cgiFdToResponseFd[fd]];
+					int clientFd = _cgiFdToResponseFd[fd];
+					Response &response = _responses[clientFd];
+					Response::e_IOReturn recvReturn = response.retrieve();
+					if (recvReturn == Response::IO_ERROR || recvReturn == Response::IO_DISCONNECT)
+					{
+						if (recvReturn == Response::IO_ERROR)
+							std::perror("recv");
+						shouldDisconnect = true;
+					}
 				}
 			}
 			if (!shouldDisconnect && events[i].events & EPOLLOUT)
