@@ -26,8 +26,12 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	{
 		std::cout<<"IS IT CGI ? "<<std::endl;
 	}
-	createResponseLine(request);
-	getDefaultHeaders(request);
+	else
+	{
+		
+	}
+	std::string responseLine = createResponseLine(request);
+	std::string headers = getDefaultHeaders(request);
 }
 
 Response::~Response()
@@ -62,37 +66,22 @@ Response::ResponseLine Response::createResponseLine(Request const &request, std:
 	_responseLine.statusCode = request.getStatusCode();
 	_responseLine.reasonPhrase = reason;
 	_responseLine.httpVersion = request.getStartLine().httpVersion;
-
-	std::cout << "response code :" << _responseLine.statusCode <<std::endl;
-	std::cout << "response reason :" << _responseLine.reasonPhrase <<std::endl;
-	std::cout << "response httpVersion :" << _responseLine.httpVersion <<std::endl;
 	return _responseLine;
 }
 
 std::string Response::getDefaultHeaders(Request const &request)
 {
-	//ft_webvserv/1.0\r\ndate: [insert the date with this format]\r\nage: 0\r\n".
-
-	// HTTP/1.1 200
-	// Content-Type: text/html
-	// Date: Tue, 29 Oct 2024 16:56:32 GMT
 	time_t now;
 	time(&now);
-	std::cout<<"time stamp "<< now <<std::endl; 
-
 	tm *ltm = localtime(&now);
-
     char formatted[100];
 	std::strftime(formatted, sizeof(formatted), "%a, %d %b %Y %H:%M:%S ", ltm);
 	std::string formattedDate = formatted;
 	std::string formattedGMT = formattedDate.append("GMT");
-	std::cout  << formatted<<std::endl;
-	std::cout  << formattedGMT<<std::endl;
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
-	std::string url = server.append(version) + "\r\n";
-	std::cout<<"url check : " << url<<std::endl; 
-	return "bye";
+	std::string url = server.append(version) + "\r\n" + formattedGMT + "\r\n" + "age: 0" + "\r\n";
+	return url;
 }
 
 // --- Private Methods --- //
