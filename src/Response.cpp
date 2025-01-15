@@ -34,8 +34,9 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	{
 		//if it is not cgi static response should be sent to client
 	}
-	createResponseLine(request);
-	getDefaultHeaders(request);
+	std::string responseLine = createResponseLine(request);
+	std::string responseHeaaders = getDefaultHeaders(request);
+	std::string hi = getFileContent("web/www/index.html");
 }
 
 Response::~Response()
