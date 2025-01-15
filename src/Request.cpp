@@ -94,6 +94,14 @@ Request::e_phase Request::parse()
 		parseBody();
 	if (_phase == PHASE_BODY)
 		_phase = PHASE_COMPLETE;
+	if (_phase != PHASE_COMPLETE && _phase != PHASE_ERROR)
+	{
+		if (_buffer.size() >= MAX_BUFFER_LENGTH)
+		{
+			_phase = PHASE_ERROR;
+			_statusCode = BAD_REQUEST;
+		}
+	}
 	return _phase;
 }
 
