@@ -13,9 +13,15 @@ using std::stringstream;
 
 namespace
 {
-  std::size_t const MAX_BUFFER_LENGTH = 8192;
+	std::size_t const MAX_BUFFER_LENGTH = 8192;
 	char const HTTP_DELIMITER[] = "\r\n";
 	char const HTTP_WHITESPACES[] = "\t ";
+	char const *VALID_METHODS[] = {
+		"GET",
+		"POST",
+		"DELETE",
+		NULL
+	};
 }
 
 namespace Utils
@@ -25,6 +31,7 @@ namespace Utils
 	bool isValidToken(string const &input);
 	string trimString(string const &input, string const &charset);
 	bool isValidFieldValue(string const &fieldValue);
+	bool isValidMethod(string const &method);
 }
 
 // --- Public --- //
@@ -140,7 +147,7 @@ void Request::parseHeader()
 	std::string tmp;
 	std::size_t temp = 0;
 
-	while (temp < _buffer.size()) {	
+	while (temp < _buffer.size()) {
 		while (temp < _buffer.size() && (_buffer[temp] == '\r' || _buffer[temp] == '\n'))
 			++temp;
 		std::size_t end = _buffer.find("\r\n", temp);
@@ -160,23 +167,37 @@ void Request::parseHeader()
 
 void Request::parseStartLine()
 {
-	size_t start = _buffer.find("\n");
-	std::string line;
+	size_t start = _buffer.find("\r\n");
 	if (start != std::string::npos)
 	{
-		 std::string tmpLine(_buffer.begin(), _buffer.begin() + start);
+		std::string line(_buffer.begin(), _buffer.begin() + start);
 		_buffer.erase(_buffer.begin(), _buffer.begin() + start + 1); 
-		line = tmpLine;
+		size_t targetPos = line.find(" ");
+		_startLine.method = line.substr(0,targetPos);
+		size_t targetPosEnd = line.find(" ", targetPos + 1);
+		if (!Utils::isValidMethod(_startLine.method) || targetPosEnd == string::npos)
+		{
+			_phase = PHASE_ERROR;
+			_statusCode = BAD_REQUEST;
+			return;
+		}
+		_startLine.requestTarget = line.substr(targetPos + 1, targetPosEnd  - targetPos - 1 );
+		if (_startLine.requestTarget[0] != '/')
+		{
+			_phase = PHASE_ERROR;
+			_statusCode = BAD_REQUEST;
+			return;
+		}
+		_startLine.httpVersion = line.substr(targetPosEnd + 1);
+		if (_startLine.httpVersion != "HTTP/1.1")
+		{
+			_phase = PHASE_ERROR;
+			_statusCode = BAD_REQUEST;
+			return;
+		}
+		_phase = PHASE_START_LINE;
 	}
-	size_t targetPos = line.find("/");
-	size_t targetPosEnd = line.find("H");
-	_startLine.method = line.substr(0,targetPos - 1);
-	_startLine.requestTarget = line.substr(targetPos, targetPosEnd  - targetPos - 1 );
-	_startLine.httpVersion = line.substr(targetPosEnd);
-	_phase = PHASE_START_LINE;
 }
-
-
 
 Request::MessageBody::MessageBody():
 	len(0),
@@ -444,6 +465,15 @@ bool Utils::isValidFieldValue(string const &fieldValue)
 	return true;
 }
 
+bool Utils::isValidMethod(string const &method)
+{
+	for (std::size_t i = 0; VALID_METHODS[i] != NULL; ++i)
+	{
+		if (method == VALID_METHODS[i])
+			return true;
+	}
+	return false;
+}
 
 // -- debugging fuction --//
 void Request::printRequest()
