@@ -441,7 +441,6 @@ string Utils::trimString(string const &input, string const &charset)
 	return input.substr(start, end - start + 1);
 }
 
-
 bool Utils::isValidFieldValue(string const &fieldValue)
 {
 	if (fieldValue.empty())

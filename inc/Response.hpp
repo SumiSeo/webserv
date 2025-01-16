@@ -74,13 +74,14 @@ class Response
 	/* Methods */
 	bool handleCGI(Request const &request, std::string const &cgiExecutable, std::string const &pathname);
 	bool isError(Request const &request);
-	int isCGI(WebServer::Location const &location);
+	int isCGI(WebServer::Location const &location) const;
 	std::string getFileContent(std::string const &pathname) const;
 	char **headersToEnv(t_mapStrings const &headers, t_mapStrings const &cgiHeaders) const;
 	std::string getLocationBlock(std::string const &requestTarget) const;
 	t_vecString getValueOfLocation(std::string const &target);
 	t_vecString getValueOfServer(std::string const &target);
 	void splitRequestTarget(std::string const &requestTarget);
+	void parseCGIResponse();
 };
 
 class MyFileDescriptor

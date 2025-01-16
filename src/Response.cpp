@@ -28,6 +28,7 @@ namespace Utils
 {
 	std::size_t lenLongestPrefix(char const str1[], char const str2[]);
 	bool isDirectory(char const pathname[]);
+	string trimString(string const &input, string const &charset);
 }
 
 // --- Public Methods --- //
@@ -105,7 +106,7 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	}
 	if(isCGI(configs._locations.at(locationKey)))
 	{
-		if (!handleCGI(request, configs._locations.at(locationKey)._pairs.at("cgi")[0], pathname))
+		if (!handleCGI(request, getValueOfLocation("cgi")[0], pathname))
 		{
 			// TODO: set internal error in the response
 		}
@@ -259,10 +260,13 @@ bool Response::isError(Request const &request)
 	return false;
 }
 
-int Response::isCGI(WebServer::Location const &location)
+int Response::isCGI(WebServer::Location const &location) const
 {
-	return location._pairs.find("cgi") != location._pairs.end();
+	typedef map<string, t_vecString> t_mapStringVecString;
+	t_mapStringVecString::const_iterator cgi = location._pairs.find("cgi");
+	return cgi != location._pairs.end() && cgi->second.size() != 0;
 }
+
 string Response::getFileContent(string const &pathname) const
 {
 	ifstream input(pathname.c_str());
@@ -371,6 +375,39 @@ void Response::splitRequestTarget(string const &requestTarget)
 	_requestQuery = requestTarget.substr(pos + 1);
 }
 
+void Response::parseCGIResponse()
+{
+	t_mapStrings cgiHeaders;
+	std::size_t pos = _cgiData.find("\n");
+	while (pos != 0)
+	{
+		string headerLine = _cgiData.substr(0, pos);
+		_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 1);
+		pos = headerLine.find(":");
+		if (pos != string::npos)
+		{
+			string fieldName = headerLine.substr(0, pos);
+			string fieldValue = Utils::trimString(headerLine.substr(pos + 1), " \t");
+			cgiHeaders[fieldName] = fieldValue;
+		}
+		pos = _cgiData.find("\n");
+	}
+	_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 1);
+	if (cgiHeaders.find("Status") != cgiHeaders.end())
+	{
+		_buffer = "HTTP/1.1 " + cgiHeaders["Status"] + "\r\n";
+		cgiHeaders.erase("Status");
+	}
+	else
+		_buffer = "HTTP/1.1 200 OK\r\n";
+	// _buffer += getDefaultHeaders() + "\r\n";
+	for (t_mapStrings::const_iterator it = cgiHeaders.begin(); it != cgiHeaders.end(); ++it)
+		_buffer += it->first + ": " + it->second + "\r\n";
+	_buffer += "\r\n" + _cgiData;
+	string().swap(_cgiData);
+	_responseComplete = true;
+}
+
 MyFileDescriptor::MyFileDescriptor(int fd):
 	_fd(fd)
 { }
@@ -405,3 +442,12 @@ bool Utils::isDirectory(char const pathname[])
 
 	return !!(s.st_mode & S_IFDIR);
 }
+
+//string Utils::trimString(string const &input, string const &charset)
+//{
+//	std::size_t start = input.find_first_not_of(charset);
+//	if (start == string::npos)
+//		start = 0;
+//	std::size_t end = input.find_last_not_of(charset);
+//	return input.substr(start, end - start + 1);
+//}
