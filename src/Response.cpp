@@ -164,10 +164,16 @@ Response::e_IOReturn Response::retrieve()
 	char buffer[MAX_BUFFER_LEN + 1];
 	ssize_t bytes = recv(_cgiFd, buffer, MAX_BUFFER_LEN, 0);
 	if (bytes == -1)
+	{
+		parseCGIResponse();
 		return IO_ERROR;
+	}
 
 	if (bytes == 0)
+	{
+		parseCGIResponse();
 		return IO_DISCONNECT;
+	}
 
 	_cgiData += buffer;
 	return IO_SUCCESS;
@@ -403,6 +409,11 @@ void Response::parseCGIResponse()
 	// _buffer += getDefaultHeaders() + "\r\n";
 	for (t_mapStrings::const_iterator it = cgiHeaders.begin(); it != cgiHeaders.end(); ++it)
 		_buffer += it->first + ": " + it->second + "\r\n";
+	{
+		stringstream ss;
+		ss << _cgiData.size();
+		_buffer += "Content-Length: " + ss.str() + "\r\n";
+	}
 	_buffer += "\r\n" + _cgiData;
 	string().swap(_cgiData);
 	_responseComplete = true;
