@@ -372,6 +372,22 @@ void WebServer::loop()
 						if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
 						{
 							_responses[fd] = Response(request, _servers[0]);
+							Response &response = _responses[fd];
+							int const &cgiFd = response.getFdCGI();
+							if (cgiFd != -1)
+							{
+								std::memset(&event, 0, sizeof(event));
+								event.events = EPOLLIN | EPOLLOUT;
+								event.data.fd = cgiFd;
+								if(epoll_ctl(_epollFd, EPOLL_CTL_ADD, cgiFd, &event) == -1)
+								{
+									std::perror("epoll_ctl(EPOLL_CTL_ADD)");
+									close(cgiFd);
+									response.setEndCGI();
+								}
+								else
+									_cgiFdToResponseFd[cgiFd] = fd;
+							}
 							
 							// TODO: Create a response for either of these 2 phases
 							// we will create a map for response 
@@ -389,6 +405,7 @@ void WebServer::loop()
 					{
 						if (recvReturn == Response::IO_ERROR)
 							std::perror("recv");
+						response.setEndCGI();
 						shouldDisconnect = true;
 					}
 				}

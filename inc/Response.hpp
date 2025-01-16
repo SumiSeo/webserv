@@ -44,6 +44,7 @@ class Response
 	int const &getFdCGI() const;
 	std::string &getResponse();
 	bool isComplete() const;
+	void setEndCGI();
 	e_IOReturn retrieve();
 
 	void createResponseLine(Request const &request, std::string const & reason = "");
@@ -69,7 +70,6 @@ class Response
 	WebServer::Location _locationBlock;
 	std::string _requestFile;
 	std::string _requestQuery;
-	std::string _requestPathInfo;
 	
 	/* Methods */
 	bool handleCGI(Request const &request, std::string const &cgiExecutable, std::string const &pathname);

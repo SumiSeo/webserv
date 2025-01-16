@@ -55,6 +55,7 @@ Response::Response(Response const &src):
 
 Response::Response(Request const &request, WebServer::Server const &configs):
 	_cgiFd(-1),
+	_cgiFinished(false),
 	_responseComplete(false),
 	_serverBlock(configs)
 {
@@ -152,21 +153,20 @@ bool Response::isComplete() const
 	return _responseComplete;
 }
 
+void Response::setEndCGI()
+{
+	_cgiFinished = true;
+}
+
 Response::e_IOReturn Response::retrieve()
 {
 	char buffer[MAX_BUFFER_LEN + 1];
 	ssize_t bytes = recv(_cgiFd, buffer, MAX_BUFFER_LEN, 0);
 	if (bytes == -1)
-	{
-		_cgiFinished = true;
 		return IO_ERROR;
-	}
 
 	if (bytes == 0)
-	{
-		_cgiFinished = true;
 		return IO_DISCONNECT;
-	}
 
 	_cgiData += buffer;
 	return IO_SUCCESS;
@@ -224,6 +224,7 @@ bool Response::handleCGI(Request const &request, string const &cgiExecutable, st
 		cgiHeaders["REDIRECT_STATUS"] = "200";
 		cgiHeaders["SCRIPT_NAME"] = _requestFile;
 		cgiHeaders["PATH_TRANSLATED"] = pathname;
+		cgiHeaders["PATH_INFO"] = _requestFile;
 		char **envp = headersToEnv(headers, cgiHeaders);
 		if (envp == NULL)
 			goto endCGI;
