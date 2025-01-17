@@ -25,11 +25,33 @@ time, mark, audio, video {
     }
 
      </style>
+    
 </head>
 <body>
     <div>
-        <h1>FREE IMAGE STOCK </h1>
+        <h1>Free image stock</h1>
+        <form action="http://localhost:8080/uploade" class="form" method="post" enctype="multipart/form-data">
+            <div><label>click to upload your image :  </label></div>
+            <div><input type="file" name="browse" multiple/></div>
+            <div><button>upload</button></div>
+        </form>
     </div>
-    
+    <script>
+        const form = document.querySelector(".form");
+        
+        form.addEventListener("submit",(e)=>{
+            e.preventDefault();
+            uploadFile();
+        })
+        function uploadFile (){
+            const url = "http://localhost:8080/upload";
+            const form_data = new FormData(form);
+            const fetchOptions = {
+                method : "post",
+                body : form_data,
+            }
+            fetch(url,fetchOptions);
+        }
+     </script>
 </body>
 </html>
