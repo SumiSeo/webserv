@@ -117,8 +117,9 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	{
 		//if it is not cgi static response should be sent to client
 	}
-	createResponseLine(request);
-	getDefaultHeaders(request);
+	std::string responseLine = createResponseLine(request);
+	std::string responseHeaaders = getDefaultHeaders(request);
+	std::string hi = getFileContent("web/www/index.html");
 }
 
 Response::~Response()
@@ -164,7 +165,7 @@ void Response::setEndCGI()
 Response::e_IOReturn Response::retrieve()
 {
 	char buffer[MAX_BUFFER_LEN + 1];
-	ssize_t bytes = recv(_cgiFd, buffer, MAX_BUFFER_LEN, 0);
+	ssize_t bytes = recv(_cgiFd, buffer, MAX_BUFFER_LEN, 0);root 
 	if (bytes == -1)
 	{
 		parseCGIResponse();
@@ -181,14 +182,21 @@ Response::e_IOReturn Response::retrieve()
 	return IO_SUCCESS;
 }
 
-void Response::createResponseLine(Request const &request, std::string const & reason)
+std::string Response::createResponseLine(Request const &request, std::string const & reason)
 {
-	_responseLine.statusCode = request.getStatusCode();
+	Request::e_phase phase = request.getPhase();
+	if(phase == Request::PHASE_COMPLETE)
+		_responseLine.statusCode = "200";
+	else if(phase == Request::PHASE_ERROR)
+		_responseLine.statusCode = "404";
 	_responseLine.reasonPhrase = reason;
-	_responseLine.httpVersion = request.getStartLine().httpVersion;
+	_responseLine.httpVersion = "HTTP/1.1";
+
+	std::string responseLine = _responseLine.httpVersion + " " + _responseLine.statusCode + " " + _responseLine.reasonPhrase + "\r\n";
+	return responseLine;
 }
 
-void Response::getDefaultHeaders(Request const &request)
+std::string Response::getDefaultHeaders(Request const &request)
 {
 	time_t now;
 	time(&now);
@@ -199,11 +207,11 @@ void Response::getDefaultHeaders(Request const &request)
 	std::string formattedGMT = formattedDate.append("GMT");
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
-	std::string url = server.append(version) + "\r\n" + formattedGMT + "\r\n" + "age: 0" + "\r\n";
-	_headers = url;
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
+	return url;
 }
 
-// --- Private Methods --- //
+// --- Private Methods --- //root 
 bool Response::handleCGI(Request const &request, string const &cgiExecutable, string const &pathname)
 {
 	int	socketPairFds[2];
@@ -264,7 +272,7 @@ endCGI:
 	}
 	close(socketPairFds[CHILD_END]);
 	_cgiFd = socketPairFds[PARENT_END];
-	return true;
+	return true;root 
 }
 
 bool Response::isError(Request const &request)
@@ -289,11 +297,12 @@ int Response::isCGI(WebServer::Location const &location) const
 	return cgi != location._pairs.end() && cgi->second.size() != 0;
 }
 
+// /board/www/abc/index.html 
 string Response::getFileContent(string const &pathname) const
 {
 	ifstream input(pathname.c_str());
 	if (!input.is_open())
-		return string();
+		return string();root 
 	stringstream content;
 	content << input.rdbuf();
 	return content.str();
@@ -471,34 +480,3 @@ bool Utils::isDirectory(char const pathname[])
 
 	return !!(s.st_mode & S_IFDIR);
 }
-
-//string Utils::trimString(string const &input, string const &charset)
-//{
-//	std::size_t start = input.find_first_not_of(charset);
-//	if (start == string::npos)
-//		start = 0;
-//	std::size_t end = input.find_last_not_of(charset);
-//	return input.substr(start, end - start + 1);
-//}
-//
-//string Utils::getListenAddress(t_vecString const &listenValue)
-//{
-//	if (listenValue.size() == 0)
-//		return string();
-//	string const &value = listenValue[0];
-//	std::size_t pos = value.rfind(':');
-//	if (pos == string::npos)
-//		return string();
-//	return value.substr(0, pos);
-//}
-//
-//string Utils::getListenPort(t_vecString const &listenValue)
-//{
-//	if (listenValue.size() == 0)
-//		return string();
-//	string const &value = listenValue[0];
-//	std::size_t pos = value.rfind(':');
-//	if (pos == string::npos)
-//		return string();
-//	return value.substr(pos + 1);
-//}

@@ -37,7 +37,7 @@ class Response
 	struct ResponseLine 
 	{
 		std::string httpVersion;
-		int statusCode;
+		std::string statusCode;
 		std::string reasonPhrase;
 	};
 
@@ -47,9 +47,9 @@ class Response
 	void setEndCGI();
 	e_IOReturn retrieve();
 
-	void createResponseLine(Request const &request, std::string const & reason = "");
+	std::string createResponseLine(Request const &request, std::string const & reason = "");
 	
-	void getDefaultHeaders(Request const &request);
+	std::string getDefaultHeaders(Request const &request);
 
   protected:
 

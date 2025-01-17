@@ -27,13 +27,25 @@ namespace
 {
 	char const *const SERVER_KEYS[] = {
 		"listen",
+		"root",
 		"server_name",
+		"autoindex",
 		"error_page",
+		"client_max_body_size",
+		"allow_methods",
+		"index",
+		"cgi",
 		NULL,
 	};
 	char const *const LOCATION_KEYS[] = {
 		"root",
 		"autoindex",
+		"error_page",
+		"client_max_body_size",
+		"allow_methods",
+		"index",
+		"cgi",
+		"return",
 		NULL,
 	};
 	char const *const DEFAULT_PORT = "8080";
@@ -56,6 +68,8 @@ WebServer::WebServer(char const fileName[]):
 {
 	t_vecString listTokens = readFile(fileName);
 	searchTokens(listTokens);
+	if (_servers.size() == 0 || _servers[0]._locations.size() == 0)
+		throw std::runtime_error("Not a valid config file");
 	createServer();
 }
 
@@ -89,6 +103,8 @@ WebServer::t_vecString WebServer::readFile(char const filename[])
 
 	ifstream infile(filename);
 	infile.exceptions(ifstream::badbit);
+	if (!infile.is_open())
+		throw std::runtime_error(string("Cannot open file ") + filename);
 	for (string content; std::getline(infile, content);)
 	{
 		content = content.substr(0, content.find('#'));
