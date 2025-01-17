@@ -107,7 +107,8 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	}
 	string responseLine = createResponseLine(request);
 	string responseHeaders = responseLine.append(getDefaultHeaders(request));
-	string responseBody = getFileContent("web/www/home/index.html");
+	std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
+	string responseBody = getFileContent(_absolutePath);
 	string _buffer = responseHeaders.append(responseBody);
 	std::cout << "fd check" << request.getFd()<<std::endl;
 	std::cout<<"buffer :" << _buffer <<std::endl;
@@ -196,9 +197,10 @@ std::string Response::getDefaultHeaders(Request const &request)
 	std::strftime(formatted, sizeof(formatted), "%a, %d %b %Y %H:%M:%S ", ltm);
 	std::string formattedDate = formatted;
 	std::string formattedGMT = formattedDate.append("GMT");
+	std::string contentType = getContentType("index.html");
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
-	std::string url = "Server: " + server.append(version) + "\r\n" + "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
 	return url;
 }
 
