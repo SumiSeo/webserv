@@ -1,6 +1,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -222,6 +223,37 @@ bool Response::handleCGI(Request const &request, string const &cgiExecutable)
 			throw std::runtime_error("dup2 failed");
 		}
 		close(socketPairFds[CHILD_END]);
+
+		if (request.getBody().size() != 0)
+		{
+			char nameTemplate[] = "/tmp/body_request_cgi_XXXXXX";
+			int bodyFd = mkstemp(nameTemplate);
+
+			if (bodyFd == -1)
+			{
+				std::perror("mkstemp");
+				throw std::runtime_error("mkstemp failed");
+			}
+			if (write(bodyFd, request.getBody().c_str(), request.getBody().size()) == -1)
+			{
+				std::perror("write");
+				close(bodyFd);
+				throw std::runtime_error("write failed");
+			}
+			if (lseek(bodyFd, 0, SEEK_SET) == -1)
+			{
+				std::perror("lseek");
+				close(bodyFd);
+				throw std::runtime_error("lseek failed");
+			}
+			if (dup2(bodyFd, STDIN_FILENO) == -1)
+			{
+				std::perror("dup2");
+				close(bodyFd);
+				throw std::runtime_error("dup2 failed");
+			}
+			close(bodyFd);
+		}
 
 		t_mapStrings headers = request.getHeaders();
 		t_mapStrings cgiHeaders = createCGIHeaders(request);
