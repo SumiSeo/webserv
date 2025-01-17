@@ -336,10 +336,12 @@ string Response::getLocationBlock(std::string const &requestTarget) const
 
 	for (t_mapStringLoc::const_iterator it = _serverBlock._locations.begin(); it != _serverBlock._locations.end(); ++it)
 	{
-		string locationValue = it->first;
+		string const &locationValue = it->first;
+		std::size_t lenPrefix = 0;
 		if (locationValue.at(locationValue.size() - 1) == '/')
-			locationValue.erase(locationValue.end() - 1);
-		std::size_t lenPrefix = Utils::lenLongestPrefix(locationValue.c_str(), requestTarget.c_str());
+			lenPrefix = Utils::lenLongestPrefix(locationValue.c_str(), requestTarget.c_str());
+		else if (std::strcmp(locationValue.c_str(), requestTarget.c_str()) == 0)
+			return locationValue;
 		if (lenPrefix > lenMax)
 		{
 			locationBlock = it;

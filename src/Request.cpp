@@ -227,8 +227,8 @@ Request::MessageBody &Request::MessageBody::operator=(MessageBody const &rhs)
 
 void Request::parseBody()
 {
-	t_mapString::iterator contentHeaderIt = _headers.find("CONTENT-LENGTH"),
-							transferHeaderIt = _headers.find("TRANSFER-ENCODING");
+	t_mapString::iterator contentHeaderIt = _headers.find("CONTENT_LENGTH"),
+							transferHeaderIt = _headers.find("TRANSFER_ENCODING");
 
 	if (transferHeaderIt != _headers.end())
 	{
@@ -298,7 +298,7 @@ Request::e_statusFunction Request::readChunkData()
 	_body.len = _body.data.size();
 	stringstream number;
 	number << _body.len;
-	_headers["CONTENT-LENGTH"] = number.str();
+	_headers["CONTENT_LENGTH"] = number.str();
 	_body.chunkCompleted = true;
 	return STATUS_FUNCTION_NONE;
 }
