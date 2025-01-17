@@ -67,15 +67,17 @@ class Response
 	ResponseLine _responseLine;
 	std::string _headers;
 	WebServer::Server _serverBlock;
+	std::string _locationKey;
 	WebServer::Location _locationBlock;
 	std::string _requestFile;
 	std::string _requestQuery;
+	std::string _absolutePath;
 	t_mapStrings _contentType;
 	
 	/* Methods */
-	bool handleCGI(Request const &request, std::string const &cgiExecutable, std::string const &pathname);
+	bool handleCGI(Request const &request, std::string const &cgiExecutable);
 	bool isError(Request const &request);
-	int isCGI(WebServer::Location const &location) const;
+	int isCGI() const;
 	std::string getFileContent(std::string const &pathname) const;
 	char **headersToEnv(t_mapStrings const &headers, t_mapStrings const &cgiHeaders) const;
 	std::string getLocationBlock(std::string const &requestTarget) const;
@@ -83,23 +85,12 @@ class Response
 	t_vecString getValueOfServer(std::string const &target);
 	void splitRequestTarget(std::string const &requestTarget);
 	void parseCGIResponse();
+	int setLocationBlock(Request const &request);
+	int setAbsolutePathname();
+	t_mapStrings createCGIHeaders(Request const &request);
+	t_vecString getValueOf(std::string const &target);
 	void initContentType();
 	std::string getContentType(std::string const &file);
-};
-
-class MyFileDescriptor
-{
-public:
-	MyFileDescriptor(int fd);
-	~MyFileDescriptor();
-
-private:
-	int _fd;
-
-	MyFileDescriptor();
-	MyFileDescriptor(MyFileDescriptor const &src);
-
-	MyFileDescriptor &operator=(MyFileDescriptor const &rhs);
 };
 
 #endif

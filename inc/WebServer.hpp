@@ -79,6 +79,7 @@ class WebServer
 		t_vecString::const_iterator end);
 	static void *get_in_addr(struct sockaddr *sa);
 	int createServer();
+	bool handleCGIInput(int fd);
 
 	// -- debugging functions -- //
 	void printKeyValues();

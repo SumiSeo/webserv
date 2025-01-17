@@ -71,6 +71,8 @@ WebServer::WebServer(char const fileName[]):
 	if (_servers.size() == 0 || _servers[0]._locations.size() == 0)
 		throw std::runtime_error("Not a valid config file");
 	createServer();
+	if (_servers.size() == 0)
+		throw std::runtime_error("Cannot listen any server");
 }
 
 WebServer::~WebServer()
@@ -342,8 +344,10 @@ void WebServer::loop()
 			{
 				if (_socketFds.find(fd) != _socketFds.end())
 					_socketFds.erase(fd);
-				else
+				else if (_requests.find(fd) != _requests.end())
 					_requests.erase(fd);
+				else if (_cgiFdToResponseFd.find(fd) != _cgiFdToResponseFd.end())
+					handleCGIInput(fd);
 				if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
 					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
 				close(fd);
@@ -413,18 +417,7 @@ void WebServer::loop()
 					}
 				}
 				else if (_cgiFdToResponseFd.find(fd) != _cgiFdToResponseFd.end())
-				{
-					int clientFd = _cgiFdToResponseFd[fd];
-					Response &response = _responses[clientFd];
-					Response::e_IOReturn recvReturn = response.retrieve();
-					if (recvReturn == Response::IO_ERROR || recvReturn == Response::IO_DISCONNECT)
-					{
-						if (recvReturn == Response::IO_ERROR)
-							std::perror("recv");
-						response.setEndCGI();
-						shouldDisconnect = true;
-					}
-				}
+					shouldDisconnect = handleCGIInput(fd);
 			}
 			if (!shouldDisconnect && events[i].events & EPOLLOUT)
 			{
@@ -435,6 +428,7 @@ void WebServer::loop()
 				if(epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
 					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
 				_requests.erase(fd);
+				_cgiFdToResponseFd.erase(fd);
 				close(fd);
 			}
 		}
@@ -481,8 +475,7 @@ int WebServer::createServer()
 			if(socketFd == -1)
 				continue;
 
-			if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(int)) == -1)
-			{
+			if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(int)) == -1) {
 				close(socketFd);
 				continue;
 			}
@@ -510,6 +503,20 @@ int WebServer::createServer()
 	return 0;
 }
 
+bool WebServer::handleCGIInput(int fd)
+{
+	int clientFd = _cgiFdToResponseFd[fd];
+	Response &response = _responses[clientFd];
+	Response::e_IOReturn recvReturn = response.retrieve();
+	if (recvReturn == Response::IO_ERROR || recvReturn == Response::IO_DISCONNECT)
+	{
+		if (recvReturn == Response::IO_ERROR)
+			std::perror("recv");
+		response.setEndCGI();
+		return true;
+	}
+	return false;
+}
 //////////** ---Static functions-- **///////////
 t_vecString Utils::split(string const &str, char delim)
 {

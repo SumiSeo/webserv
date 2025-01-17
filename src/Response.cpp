@@ -1,6 +1,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -10,7 +11,7 @@
 #include "Response.hpp"
 
 #define PARENT_END 0
-#define CHILD_END 0
+#define CHILD_END 1
 
 using std::ifstream;
 using std::map;
@@ -51,9 +52,11 @@ Response::Response(Response const &src):
 	_cgiFinished(src._cgiFinished),
 	_responseComplete(src._responseComplete),
 	_serverBlock(src._serverBlock),
+	_locationKey(src._locationKey),
 	_locationBlock(src._locationBlock),
 	_requestFile(src._requestFile),
-	_requestQuery(src._requestQuery)
+	_requestQuery(src._requestQuery),
+	_absolutePath(src._absolutePath)
 {
 }
 
@@ -68,35 +71,18 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	{
 		std::cout<<"THERE IS ERROR"<<std::endl;
 	}
-	string requestTarget = request.getStartLine().requestTarget;
-	string locationKey = getLocationBlock(requestTarget);
-	if (locationKey.empty())
+	splitRequestTarget(request.getStartLine().requestTarget);
+	if (setLocationBlock(request) != 0 || setAbsolutePathname() != 0)
 	{
 		// TODO: set to error 404 not found in the response
 		return;
 	}
-	splitRequestTarget(requestTarget);
-	_locationBlock = configs._locations.at(locationKey);
-	string pathname;
-	t_vecString root = getValueOfLocation("root");
-	if (root.empty())
-		root = getValueOfServer("root");
-	if (!root.empty())
-		pathname += root.at(0) + '/';
-	else
-		_requestFile.erase(_requestFile.begin());
-
-	pathname += _requestFile;
-	if (Utils::isDirectory(pathname.c_str()))
+	if (Utils::isDirectory(_absolutePath.c_str()))
 	{
-		t_vecString index = getValueOfLocation("index");
-		if (index.empty())
-			index = getValueOfServer("index");
+		t_vecString index = getValueOf("index");
 		if (index.empty())
 		{
-			t_vecString autoIndex = getValueOfLocation("autoindex");
-			if (autoIndex.empty())
-				autoIndex = getValueOfServer("autoindex");
+			t_vecString autoIndex = getValueOf("autoindex");
 			if (autoIndex.empty())
 			{
 				// TODO: set an error in the response 
@@ -105,12 +91,12 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 			// TODO: create a response that list all files in the directory
 			return;
 		}
-		pathname += index.at(0);
+		_absolutePath += index.at(0);
 	}
 
-	if(isCGI(configs._locations.at(locationKey)))
+	if(isCGI())
 	{
-		if (!handleCGI(request, getValueOfLocation("cgi")[0], pathname))
+		if (!handleCGI(request, getValueOfLocation("cgi")[0]))
 		{
 			// TODO: set internal error in the response
 		}
@@ -143,9 +129,11 @@ Response &Response::operator=(Response const &rhs)
 	_cgiFinished = rhs._cgiFinished;
 	_responseComplete = rhs._responseComplete;
 	_serverBlock = rhs._serverBlock;
+	_locationKey = rhs._locationKey;
 	_locationBlock = rhs._locationBlock;
 	_requestFile = rhs._requestFile;
 	_requestQuery = rhs._requestQuery;
+	_absolutePath = rhs._absolutePath;
 	return *this;
 }
 
@@ -174,16 +162,12 @@ Response::e_IOReturn Response::retrieve()
 	char buffer[MAX_BUFFER_LEN + 1];
 	ssize_t bytes = recv(_cgiFd, buffer, MAX_BUFFER_LEN, 0);
 	if (bytes == -1)
-	{
-		parseCGIResponse();
 		return IO_ERROR;
-	}
 
 	if (bytes == 0)
-	{
-		parseCGIResponse();
 		return IO_DISCONNECT;
-	}
+
+	buffer[bytes] = '\0';
 
 	_cgiData += buffer;
 	return IO_SUCCESS;
@@ -219,10 +203,10 @@ std::string Response::getDefaultHeaders(Request const &request)
 }
 
 // --- Private Methods --- //root 
-bool Response::handleCGI(Request const &request, string const &cgiExecutable, string const &pathname)
+bool Response::handleCGI(Request const &request, string const &cgiExecutable)
 {
 	int	socketPairFds[2];
-	if (socketpair(AF_INET, SOCK_STREAM, 0, socketPairFds) == -1)
+	if (socketpair(AF_UNIX, SOCK_STREAM, 0, socketPairFds) == -1)
 	{
 		std::perror("socketpair");
 		return false;
@@ -237,38 +221,56 @@ bool Response::handleCGI(Request const &request, string const &cgiExecutable, st
 	}
 	if (_cgiPid == 0)
 	{
-		char *argv[3] = {NULL, NULL, NULL};
 		close(socketPairFds[PARENT_END]);
-		MyFileDescriptor autoCloseFd(socketPairFds[CHILD_END]);
+		char *argv[3] = {NULL, NULL, NULL};
+		if (dup2(socketPairFds[CHILD_END], STDOUT_FILENO) == -1)
+		{
+			std::perror("dup2");
+			close(socketPairFds[CHILD_END]);
+			throw std::runtime_error("dup2 failed");
+		}
+		close(socketPairFds[CHILD_END]);
+
+		if (request.getBody().size() != 0)
+		{
+			char nameTemplate[] = "/tmp/body_request_cgi_XXXXXX";
+			int bodyFd = mkstemp(nameTemplate);
+
+			if (bodyFd == -1)
+			{
+				std::perror("mkstemp");
+				throw std::runtime_error("mkstemp failed");
+			}
+			if (write(bodyFd, request.getBody().c_str(), request.getBody().size()) == -1)
+			{
+				std::perror("write");
+				close(bodyFd);
+				throw std::runtime_error("write failed");
+			}
+			if (lseek(bodyFd, 0, SEEK_SET) == -1)
+			{
+				std::perror("lseek");
+				close(bodyFd);
+				throw std::runtime_error("lseek failed");
+			}
+			if (dup2(bodyFd, STDIN_FILENO) == -1)
+			{
+				std::perror("dup2");
+				close(bodyFd);
+				throw std::runtime_error("dup2 failed");
+			}
+			close(bodyFd);
+		}
 
 		t_mapStrings headers = request.getHeaders();
-		t_mapStrings cgiHeaders;
-		cgiHeaders["REQUEST_METHOD"] = request.getStartLine().method;
-		cgiHeaders["QUERY_STRING"] = _requestQuery;
-		cgiHeaders["REDIRECT_STATUS"] = "200";
-		cgiHeaders["SCRIPT_NAME"] = _requestFile;
-		cgiHeaders["PATH_TRANSLATED"] = pathname;
-		cgiHeaders["PATH_INFO"] = _requestFile;
-		cgiHeaders["GATEWAY_INTERFACE"] = "CGI/1.1";
-		cgiHeaders["SERVER_SOFTWARE"] = "ft_webserv/1.0";
-		string listenAddress = "127.0.0.1";
-		string listenPort = "8080";
-		t_vecString listenValue = getValueOfServer("listen");
-		if (listenValue.size() != 0)
-		{
-			listenAddress = Utils::getListenAddress(listenValue);
-			listenPort = Utils::getListenPort(listenValue);
-		}
-		cgiHeaders["SERVER_NAME"] = listenAddress;
-		cgiHeaders["SERVER_PORT"] = listenPort;
-		cgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1";
+		t_mapStrings cgiHeaders = createCGIHeaders(request);
 
 		char **envp = headersToEnv(headers, cgiHeaders);
 		if (envp == NULL)
 			goto endCGI;
 
 		argv[0] = strdup(cgiExecutable.c_str());
-		argv[1] = strdup(pathname.c_str());
+		argv[1] = strdup(_absolutePath.c_str());
 		if (argv[0] == NULL || argv[1] == NULL)
 			goto endCGI;
 		execve(argv[0], argv, envp);
@@ -297,11 +299,11 @@ bool Response::isError(Request const &request)
 	return false;
 }
 
-int Response::isCGI(WebServer::Location const &location) const
+int Response::isCGI() const
 {
 	typedef map<string, t_vecString> t_mapStringVecString;
-	t_mapStringVecString::const_iterator cgi = location._pairs.find("cgi");
-	return cgi != location._pairs.end() && cgi->second.size() != 0;
+	t_mapStringVecString::const_iterator cgi = _locationBlock._pairs.find("cgi");
+	return cgi != _locationBlock._pairs.end() && cgi->second.size() != 0;
 }
 
 // /board/www/abc/index.html 
@@ -453,6 +455,57 @@ void Response::parseCGIResponse()
 	_responseComplete = true;
 }
 
+int Response::setLocationBlock(Request const &request)
+{
+	_locationKey = getLocationBlock(request.getStartLine().requestTarget);
+	if (_locationKey.empty())
+		return 1;
+	_locationBlock = _serverBlock._locations.at(_locationKey);
+	return 0;
+}
+
+int Response::setAbsolutePathname()
+{
+	t_vecString root = getValueOf("root");
+	if (root.empty())
+		return 1;
+	_absolutePath += root.at(0) + _requestFile.substr(_locationKey.size());
+	return 0;
+}
+
+Response::t_mapStrings Response::createCGIHeaders(Request const &request)
+{
+	t_mapStrings cgiHeaders;
+	cgiHeaders["REQUEST_METHOD"] = request.getStartLine().method;
+	cgiHeaders["QUERY_STRING"] = _requestQuery;
+	cgiHeaders["REDIRECT_STATUS"] = "200";
+	cgiHeaders["SCRIPT_NAME"] = _requestFile;
+	cgiHeaders["PATH_TRANSLATED"] = _absolutePath;
+	cgiHeaders["PATH_INFO"] = _requestFile;
+	cgiHeaders["GATEWAY_INTERFACE"] = "CGI/1.1";
+	cgiHeaders["SERVER_SOFTWARE"] = "ft_webserv/1.0";
+	string listenAddress = "127.0.0.1";
+	string listenPort = "8080";
+	t_vecString listenValue = getValueOfServer("listen");
+	if (listenValue.size() != 0)
+	{
+		listenAddress = Utils::getListenAddress(listenValue);
+		listenPort = Utils::getListenPort(listenValue);
+	}
+	cgiHeaders["SERVER_NAME"] = listenAddress;
+	cgiHeaders["SERVER_PORT"] = listenPort;
+	cgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1";
+	return cgiHeaders;
+}
+
+Response::t_vecString Response::getValueOf(string const &target)
+{
+	t_vecString values = getValueOfLocation(target);
+	if (values.empty())
+		values = getValueOfServer(target);
+	return values;
+}
+
 void Response::initContentType()
 {
 	_contentType["html"] = "text/html";
@@ -491,20 +544,6 @@ string Response::getContentType(string const &file)
 		return "application/octet-stream";
 	return _contentType[extension];
 }
-
-MyFileDescriptor::MyFileDescriptor(int fd):
-	_fd(fd)
-{ }
-MyFileDescriptor::~MyFileDescriptor()
-{ close(_fd); }
-MyFileDescriptor::MyFileDescriptor():
-	_fd(-1)
-{ }
-MyFileDescriptor::MyFileDescriptor(MyFileDescriptor const &):
-	_fd(-1)
-{ }
-MyFileDescriptor &MyFileDescriptor::operator=(MyFileDescriptor const &)
-{ _fd = -1; return *this; }
 
 std::size_t Utils::lenLongestPrefix(char const str1[], char const str2[])
 {
