@@ -372,7 +372,7 @@ void WebServer::loop()
 						close(clientFd);
 						continue;
 					}
-					_requests[clientFd] = Request(clientFd);
+					_requests[clientFd] = Request(clientFd, fd, &_servers);
 					continue;
 				}
 				else if (_requests.find(fd) != _requests.end())

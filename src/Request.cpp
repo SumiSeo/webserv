@@ -37,27 +37,52 @@ namespace Utils
 // --- Public --- //
 Request::Request():
 	_fd(-1),
+	_socketFd(-1),
 	_phase(PHASE_ERROR),
-	_statusCode(NONE)
+	_statusCode(NONE),
+	_servers(NULL),
+	_serverIndex(0),
+	_maxBodySize(0)
 {
 }
 
 Request::Request(Request const &src):
 	_fd(src._fd),
+	_socketFd(src._socketFd),
 	_phase(src._phase),
 	_buffer(src._buffer),
 	_startLine(src._startLine),
 	_headers(src._headers),
 	_body(src._body),
-	_statusCode(src._statusCode)
+	_statusCode(src._statusCode),
+	_servers(src._servers),
+	_serverIndex(src._serverIndex),
+	_address(src._address),
+	_port(src._port),
+	_maxBodySize(src._maxBodySize)
 {
 }
 
-Request::Request(int fd):
+Request::Request(int fd, int socketFd, t_vecServers *servers):
 	_fd(fd),
+	_socketFd(socketFd),
 	_phase(PHASE_EMPTY),
-	_statusCode(NONE)
+	_statusCode(NONE),
+	_servers(servers),
+	_serverIndex(0),
+	_maxBodySize(0)
 {
+	struct sockaddr_in addr;
+	socklen_t len = sizeof(addr);
+	if (getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != -1)
+	{
+		char ipStr[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &addr.sin_addr, ipStr, sizeof(ipStr));
+		_address = ipStr;
+		stringstream number;
+		number << ntohs(addr.sin_port);
+		_port = number.str();
+	}
 }
 
 Request::~Request()
@@ -67,12 +92,18 @@ Request::~Request()
 Request &Request::operator=(Request const &rhs)
 {
 	_fd = rhs._fd;
+	_socketFd = rhs._socketFd;
 	_phase = rhs._phase;
 	_buffer = rhs._buffer;
 	_startLine = rhs._startLine;
 	_headers = rhs._headers;
 	_body = rhs._body;
 	_statusCode = rhs._statusCode;
+	_servers = rhs._servers;
+	_serverIndex = rhs._serverIndex;
+	_address = rhs._address;
+	_port = rhs._port;
+	_maxBodySize = rhs._maxBodySize;
 	return *this;
 }
 
@@ -98,7 +129,9 @@ Request::e_phase Request::parse()
 	if (_phase == PHASE_START_LINE)
 		parseHeader();
 	if (_phase == PHASE_HEADERS)
+	{
 		parseBody();
+	}
 	if (_phase == PHASE_BODY)
 		_phase = PHASE_COMPLETE;
 	if (_phase != PHASE_COMPLETE && _phase != PHASE_ERROR)
@@ -111,8 +144,6 @@ Request::e_phase Request::parse()
 	}
 	return _phase;
 }
-
-
 
 Request::StartLine const &Request::getStartLine() const
 {
@@ -262,6 +293,10 @@ void Request::parseBody()
 	}
 	else
 		_phase = PHASE_BODY;
+}
+
+void Request::filterServers()
+{
 }
 
 Request::e_statusFunction Request::readChunkSize()

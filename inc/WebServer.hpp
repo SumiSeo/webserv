@@ -6,8 +6,6 @@
 # include <string>
 # include <vector>
 
-# include "Request.hpp"
-
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -26,6 +24,8 @@ class Response;
 
 #define BUF_SIZE 500
 #define MAX_CLIENTS 10
+
+class Request;
 
 class WebServer
 {
