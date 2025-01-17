@@ -120,7 +120,7 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	}
 	string responseLine = createResponseLine(request);
 	string responseHeaders = responseLine.append(getDefaultHeaders(request));
-	string responseBody = getFileContent("web/www/index.html");
+	string responseBody = getFileContent("web/www/home/index.html");
 	string _buffer = responseHeaders.append(responseBody);
 	std::cout << "fd check" << request.getFd()<<std::endl;
 	std::cout<<"buffer :" << _buffer <<std::endl;
