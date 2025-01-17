@@ -345,9 +345,15 @@ void WebServer::loop()
 				if (_socketFds.find(fd) != _socketFds.end())
 					_socketFds.erase(fd);
 				else if (_requests.find(fd) != _requests.end())
+				{
 					_requests.erase(fd);
+					_responses.erase(fd);
+				}
 				else if (_cgiFdToResponseFd.find(fd) != _cgiFdToResponseFd.end())
+				{
 					handleCGIInput(fd);
+					_cgiFdToResponseFd.erase(fd);
+				}
 				if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
 					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
 				close(fd);
@@ -386,7 +392,7 @@ void WebServer::loop()
 							std::perror("recv");
 						shouldDisconnect = true;
 					}
-					else
+					else if (_responses.find(fd) == _responses.end())
 					{
 						Request::e_phase phase = request.parse();
 						if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
@@ -522,6 +528,8 @@ int WebServer::createServer()
 bool WebServer::handleCGIInput(int fd)
 {
 	int clientFd = _cgiFdToResponseFd[fd];
+	if (_responses.find(clientFd) == _responses.end())
+		return true;
 	Response &response = _responses[clientFd];
 	Response::e_IOReturn recvReturn = response.retrieve();
 	if (recvReturn == Response::IO_ERROR || recvReturn == Response::IO_DISCONNECT)

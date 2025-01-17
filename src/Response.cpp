@@ -148,10 +148,17 @@ Response::e_IOReturn Response::retrieve()
 	char buffer[MAX_BUFFER_LEN + 1];
 	ssize_t bytes = recv(_cgiFd, buffer, MAX_BUFFER_LEN, 0);
 	if (bytes == -1)
+	{
+		_cgiData = "Status: 500 Internal Server Error\r\n";
 		return IO_ERROR;
+	}
 
 	if (bytes == 0)
+	{
+		if (_cgiData.empty())
+			_cgiData = "Status: 500 Internal Server Error\r\n";
 		return IO_DISCONNECT;
+	}
 
 	buffer[bytes] = '\0';
 
