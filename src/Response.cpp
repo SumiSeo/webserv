@@ -83,7 +83,7 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 		if (index.empty())
 		{
 			t_vecString autoIndex = getValueOf("autoindex");
-			if (autoIndex.empty())
+			if (autoIndex.empty() || autoIndex.at(0) == "off")
 			{
 				// TODO: set an error in the response 
 				return;
