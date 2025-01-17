@@ -149,14 +149,14 @@ Response::e_IOReturn Response::retrieve()
 	ssize_t bytes = recv(_cgiFd, buffer, MAX_BUFFER_LEN, 0);
 	if (bytes == -1)
 	{
-		_cgiData = "Status: 500 Internal Server Error\r\n";
+		_cgiData = "Status: 500 Internal Server Error\n";
 		return IO_ERROR;
 	}
 
 	if (bytes == 0)
 	{
 		if (_cgiData.empty())
-			_cgiData = "Status: 500 Internal Server Error\r\n";
+			_cgiData = "Status: 500 Internal Server Error\n";
 		return IO_DISCONNECT;
 	}
 
@@ -434,7 +434,7 @@ void Response::parseCGIResponse()
 {
 	t_mapStrings cgiHeaders;
 	std::size_t pos = _cgiData.find("\n");
-	while (pos != 0)
+	while (pos != string::npos && pos != 0)
 	{
 		string headerLine = _cgiData.substr(0, pos);
 		_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 1);
@@ -447,7 +447,10 @@ void Response::parseCGIResponse()
 		}
 		pos = _cgiData.find("\n");
 	}
-	_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 1);
+	if (pos != string::npos)
+		_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 1);
+	else
+		_cgiData.erase(_cgiData.begin(), _cgiData.end());
 	if (cgiHeaders.find("Status") != cgiHeaders.end())
 	{
 		_buffer = "HTTP/1.1 " + cgiHeaders["Status"] + "\r\n";
