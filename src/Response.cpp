@@ -76,14 +76,10 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	}
 	if (Utils::isDirectory(_absolutePath.c_str()))
 	{
-		t_vecString index = getValueOfLocation("index");
-		if (index.empty())
-			index = getValueOfServer("index");
+		t_vecString index = getValueOf("index");
 		if (index.empty())
 		{
-			t_vecString autoIndex = getValueOfLocation("autoindex");
-			if (autoIndex.empty())
-				autoIndex = getValueOfServer("autoindex");
+			t_vecString autoIndex = getValueOf("autoindex");
 			if (autoIndex.empty())
 			{
 				// TODO: set an error in the response 
@@ -431,9 +427,7 @@ int Response::setLocationBlock(Request const &request)
 
 int Response::setAbsolutePathname()
 {
-	t_vecString root = getValueOfLocation("root");
-	if (root.empty())
-		root = getValueOfServer("root");
+	t_vecString root = getValueOf("root");
 	if (root.empty())
 		return 1;
 	_absolutePath += root.at(0) + _requestFile.substr(_locationKey.size());
@@ -463,6 +457,14 @@ Response::t_mapStrings Response::createCGIHeaders(Request const &request)
 	cgiHeaders["SERVER_PORT"] = listenPort;
 	cgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1";
 	return cgiHeaders;
+}
+
+Response::t_vecString Response::getValueOf(string const &target)
+{
+	t_vecString values = getValueOfLocation(target);
+	if (values.empty())
+		values = getValueOfServer(target);
+	return values;
 }
 
 std::size_t Utils::lenLongestPrefix(char const str1[], char const str2[])

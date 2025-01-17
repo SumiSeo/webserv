@@ -87,6 +87,7 @@ class Response
 	int setLocationBlock(Request const &request);
 	int setAbsolutePathname();
 	t_mapStrings createCGIHeaders(Request const &request);
+	t_vecString getValueOf(std::string const &target);
 };
 
 #endif
