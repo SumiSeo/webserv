@@ -165,7 +165,7 @@ void Response::setEndCGI()
 Response::e_IOReturn Response::retrieve()
 {
 	char buffer[MAX_BUFFER_LEN + 1];
-	ssize_t bytes = recv(_cgiFd, buffer, MAX_BUFFER_LEN, 0);root 
+	ssize_t bytes = recv(_cgiFd, buffer, MAX_BUFFER_LEN, 0);
 	if (bytes == -1)
 	{
 		parseCGIResponse();
@@ -272,7 +272,7 @@ endCGI:
 	}
 	close(socketPairFds[CHILD_END]);
 	_cgiFd = socketPairFds[PARENT_END];
-	return true;root 
+	return true;
 }
 
 bool Response::isError(Request const &request)
@@ -302,7 +302,7 @@ string Response::getFileContent(string const &pathname) const
 {
 	ifstream input(pathname.c_str());
 	if (!input.is_open())
-		return string();root 
+		return string();
 	stringstream content;
 	content << input.rdbuf();
 	return content.str();
