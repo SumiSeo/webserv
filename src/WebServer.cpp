@@ -358,7 +358,7 @@ void WebServer::loop()
 				if (_socketFds.find(fd) != _socketFds.end())
 				{
 					int clientFd = accept(fd, NULL, NULL);
-					if(clientFd == -1)bout
+					if(clientFd == -1)
 					{
 						std::perror("accept");
 						continue;
