@@ -7,6 +7,7 @@ enum e_statusCode
 	BAD_REQUEST = 400,
 	FORBIDDEN = 403,
 	NOT_FOUND = 404,
+	VALID = 200,
 };
 
 #endif

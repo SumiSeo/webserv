@@ -68,6 +68,8 @@ WebServer::WebServer(char const fileName[]):
 {
 	t_vecString listTokens = readFile(fileName);
 	searchTokens(listTokens);
+	if (_servers.size() == 0 || _servers[0]._locations.size() == 0)
+		throw std::runtime_error("Not a valid config file");
 	createServer();
 }
 
@@ -101,6 +103,8 @@ WebServer::t_vecString WebServer::readFile(char const filename[])
 
 	ifstream infile(filename);
 	infile.exceptions(ifstream::badbit);
+	if (!infile.is_open())
+		throw std::runtime_error(string("Cannot open file ") + filename);
 	for (string content; std::getline(infile, content);)
 	{
 		content = content.substr(0, content.find('#'));
@@ -385,9 +389,6 @@ void WebServer::loop()
 						_responses[fd] = Response(request, _servers[0]);
 						
 						// TODO: Create a response for either of these 2 phases
-						// we will create a map for response 
-						// int fd of request 
-						// key = int (fd), value = Response class
 
 					}
 				}
