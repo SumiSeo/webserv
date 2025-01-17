@@ -139,7 +139,7 @@ Request::e_phase Request::getPhase() const
 	return _phase;
 } 
 
-int Request::getFd()
+int Request::getFd() const
 {
 	return _fd;
 }

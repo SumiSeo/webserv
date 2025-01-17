@@ -72,6 +72,7 @@ class Response
 	std::string _requestFile;
 	std::string _requestQuery;
 	std::string _absolutePath;
+	t_mapStrings _contentType;
 	
 	/* Methods */
 	bool handleCGI(Request const &request, std::string const &cgiExecutable);
@@ -88,6 +89,8 @@ class Response
 	int setAbsolutePathname();
 	t_mapStrings createCGIHeaders(Request const &request);
 	t_vecString getValueOf(std::string const &target);
+	void initContentType();
+	std::string getContentType(std::string const &file);
 };
 
 #endif
