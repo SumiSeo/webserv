@@ -27,13 +27,25 @@ namespace
 {
 	char const *const SERVER_KEYS[] = {
 		"listen",
+		"root",
 		"server_name",
+		"autoindex",
 		"error_page",
+		"client_max_body_size",
+		"allow_methods",
+		"index",
+		"cgi",
 		NULL,
 	};
 	char const *const LOCATION_KEYS[] = {
 		"root",
 		"autoindex",
+		"error_page",
+		"client_max_body_size",
+		"allow_methods",
+		"index",
+		"cgi",
+		"return",
 		NULL,
 	};
 	char const *const DEFAULT_PORT = "8080";
