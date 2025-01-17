@@ -38,9 +38,7 @@ namespace Utils
 // --- Public Methods --- //
 Response::Response():
 	_cgiFd(-1),
-	_cgiPid(-1),
-	_cgiFinished(false),
-	_responseComplete(false)
+	_cgiPid(-1)
 {
 }
 
@@ -49,8 +47,6 @@ Response::Response(Response const &src):
 	_cgiData(src._cgiData),
 	_cgiFd(src._cgiFd),
 	_cgiPid(src._cgiPid),
-	_cgiFinished(src._cgiFinished),
-	_responseComplete(src._responseComplete),
 	_serverBlock(src._serverBlock),
 	_locationKey(src._locationKey),
 	_locationBlock(src._locationBlock),
@@ -62,8 +58,6 @@ Response::Response(Response const &src):
 
 Response::Response(Request const &request, WebServer::Server const &configs):
 	_cgiFd(-1),
-	_cgiFinished(false),
-	_responseComplete(false),
 	_serverBlock(configs)
 {
 	initContentType();
@@ -113,7 +107,7 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	std::cout<<"buffer :" << _buffer <<std::endl;
 	int fd = request.getFd();
 	send(fd, _buffer.c_str(), _buffer.size(), 0);
-}	
+}
 
 Response::~Response()
 {
@@ -124,10 +118,7 @@ Response &Response::operator=(Response const &rhs)
 	_buffer = rhs._buffer;
 	_cgiData = rhs._cgiData;
 	_cgiFd = rhs._cgiFd;
-	_responseComplete = rhs._responseComplete;
 	_cgiPid = rhs._cgiPid;
-	_cgiFinished = rhs._cgiFinished;
-	_responseComplete = rhs._responseComplete;
 	_serverBlock = rhs._serverBlock;
 	_locationKey = rhs._locationKey;
 	_locationBlock = rhs._locationBlock;
@@ -147,14 +138,9 @@ string &Response::getResponse()
 	return _buffer;
 }
 
-bool Response::isComplete() const
-{
-	return _responseComplete;
-}
-
 void Response::setEndCGI()
 {
-	_cgiFinished = true;
+	_cgiFd = -1;
 }
 
 Response::e_IOReturn Response::retrieve()
@@ -170,6 +156,26 @@ Response::e_IOReturn Response::retrieve()
 	buffer[bytes] = '\0';
 
 	_cgiData += buffer;
+	return IO_SUCCESS;
+}
+
+Response::e_IOReturn Response::sendData(int fd)
+{
+	if (_cgiFd != -1)
+		return O_NOT_READY;
+	if (!_cgiData.empty())
+		parseCGIResponse();
+	ssize_t bytes = send(fd, _buffer.c_str(), _buffer.size(), MSG_NOSIGNAL);
+
+	if (bytes == -1)
+		return IO_ERROR;
+
+	if (_buffer.size() != 0 && bytes == 0)
+		return IO_DISCONNECT;
+
+	if (static_cast<std::size_t>(bytes) != _buffer.size())
+		return O_INCOMPLETE;
+
 	return IO_SUCCESS;
 }
 
@@ -452,7 +458,6 @@ void Response::parseCGIResponse()
 	}
 	_buffer += "\r\n" + _cgiData;
 	string().swap(_cgiData);
-	_responseComplete = true;
 }
 
 int Response::setLocationBlock(Request const &request)

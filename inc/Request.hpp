@@ -70,6 +70,8 @@ class Request
 	e_phase getPhase() const; 
 	int getFd() const; 
 
+	void reset();
+
   protected:
 
   private:

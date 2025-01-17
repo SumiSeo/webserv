@@ -144,6 +144,11 @@ int Request::getFd() const
 	return _fd;
 }
 
+void Request::reset()
+{
+	_phase = PHASE_EMPTY;
+	_statusCode = NONE;
+}
 
 // --- Private --- //
 

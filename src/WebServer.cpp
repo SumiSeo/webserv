@@ -397,7 +397,7 @@ void WebServer::loop()
 							if (cgiFd != -1)
 							{
 								std::memset(&event, 0, sizeof(event));
-								event.events = EPOLLIN | EPOLLOUT;
+								event.events = EPOLLIN;
 								event.data.fd = cgiFd;
 								if(epoll_ctl(_epollFd, EPOLL_CTL_ADD, cgiFd, &event) == -1)
 								{
@@ -421,13 +421,29 @@ void WebServer::loop()
 			}
 			if (!shouldDisconnect && events[i].events & EPOLLOUT)
 			{
-				// TODO: Check if a response exists and if it is complete to send it
+				if (_requests.find(fd) != _requests.end())
+				{
+					Response::e_IOReturn sendReturn = _responses[fd].sendData(fd);
+					if (sendReturn == Response::IO_ERROR || sendReturn == Response::IO_DISCONNECT
+						|| sendReturn == Response::O_INCOMPLETE)
+					{
+						if (sendReturn == Response::IO_ERROR)
+							std::perror("send");
+						shouldDisconnect = true;
+					}
+					if (sendReturn != Response::O_NOT_READY)
+					{
+						_requests[fd].reset();
+						_responses.erase(fd);
+					}
+				}
 			}
 			if (shouldDisconnect)
 			{
 				if(epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
 					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
 				_requests.erase(fd);
+				_responses.erase(fd);
 				_cgiFdToResponseFd.erase(fd);
 				close(fd);
 			}
