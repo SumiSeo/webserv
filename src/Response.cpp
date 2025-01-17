@@ -5,6 +5,7 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <sys/socket.h>
 
 #include "Response.hpp"
 
@@ -118,10 +119,15 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	{
 		//if it is not cgi static response should be sent to client
 	}
-	std::string responseLine = createResponseLine(request);
-	std::string responseHeaaders = getDefaultHeaders(request);
-	std::string hi = getFileContent("web/www/index.html");
-}
+	string responseLine = createResponseLine(request);
+	string responseHeaders = responseLine.append(getDefaultHeaders(request));
+	string responseBody = getFileContent("web/www/home/index.html");
+	string _buffer = responseHeaders.append(responseBody);
+	std::cout << "fd check" << request.getFd()<<std::endl;
+	std::cout<<"buffer :" << _buffer <<std::endl;
+	int fd = request.getFd();
+	send(fd, _buffer.c_str(), _buffer.size(), 0);
+}	
 
 Response::~Response()
 {
@@ -208,7 +214,7 @@ std::string Response::getDefaultHeaders(Request const &request)
 	std::string formattedGMT = formattedDate.append("GMT");
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
-	std::string url = "Server: " + server.append(version) + "\r\n" + "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
 	return url;
 }
 

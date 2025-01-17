@@ -68,7 +68,7 @@ class Request
 	std::string const &getBody() const;
 	e_statusCode getStatusCode() const;
 	e_phase getPhase() const; 
-	int getFd(); 
+	int getFd() const; 
 
   protected:
 
