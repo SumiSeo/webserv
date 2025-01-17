@@ -197,9 +197,10 @@ std::string Response::getDefaultHeaders(Request const &request)
 	std::strftime(formatted, sizeof(formatted), "%a, %d %b %Y %H:%M:%S ", ltm);
 	std::string formattedDate = formatted;
 	std::string formattedGMT = formattedDate.append("GMT");
+	std::string contentType = getContentType("index.html");
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
-	std::string url = "Server: " + server.append(version) + "\r\n" + "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
 	return url;
 }
 
