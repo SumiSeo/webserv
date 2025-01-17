@@ -86,21 +86,7 @@ class Response
 	void parseCGIResponse();
 	int setLocationBlock(Request const &request);
 	int setAbsolutePathname();
-};
-
-class MyFileDescriptor
-{
-public:
-	MyFileDescriptor(int fd);
-	~MyFileDescriptor();
-
-private:
-	int _fd;
-
-	MyFileDescriptor();
-	MyFileDescriptor(MyFileDescriptor const &src);
-
-	MyFileDescriptor &operator=(MyFileDescriptor const &rhs);
+	t_mapStrings createCGIHeaders(Request const &request);
 };
 
 #endif

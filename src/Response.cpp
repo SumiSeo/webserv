@@ -226,29 +226,9 @@ bool Response::handleCGI(Request const &request, string const &cgiExecutable)
 			throw std::runtime_error("dup2 failed");
 		}
 		close(socketPairFds[CHILD_END]);
-		MyFileDescriptor autoCloseFd(socketPairFds[CHILD_END]);
 
 		t_mapStrings headers = request.getHeaders();
-		t_mapStrings cgiHeaders;
-		cgiHeaders["REQUEST_METHOD"] = request.getStartLine().method;
-		cgiHeaders["QUERY_STRING"] = _requestQuery;
-		cgiHeaders["REDIRECT_STATUS"] = "200";
-		cgiHeaders["SCRIPT_NAME"] = _requestFile;
-		cgiHeaders["PATH_TRANSLATED"] = _absolutePath;
-		cgiHeaders["PATH_INFO"] = _requestFile;
-		cgiHeaders["GATEWAY_INTERFACE"] = "CGI/1.1";
-		cgiHeaders["SERVER_SOFTWARE"] = "ft_webserv/1.0";
-		string listenAddress = "127.0.0.1";
-		string listenPort = "8080";
-		t_vecString listenValue = getValueOfServer("listen");
-		if (listenValue.size() != 0)
-		{
-			listenAddress = Utils::getListenAddress(listenValue);
-			listenPort = Utils::getListenPort(listenValue);
-		}
-		cgiHeaders["SERVER_NAME"] = listenAddress;
-		cgiHeaders["SERVER_PORT"] = listenPort;
-		cgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1";
+		t_mapStrings cgiHeaders = createCGIHeaders(request);
 
 		char **envp = headersToEnv(headers, cgiHeaders);
 		if (envp == NULL)
@@ -460,19 +440,30 @@ int Response::setAbsolutePathname()
 	return 0;
 }
 
-MyFileDescriptor::MyFileDescriptor(int fd):
-	_fd(fd)
-{ }
-MyFileDescriptor::~MyFileDescriptor()
-{ close(_fd); }
-MyFileDescriptor::MyFileDescriptor():
-	_fd(-1)
-{ }
-MyFileDescriptor::MyFileDescriptor(MyFileDescriptor const &):
-	_fd(-1)
-{ }
-MyFileDescriptor &MyFileDescriptor::operator=(MyFileDescriptor const &)
-{ _fd = -1; return *this; }
+Response::t_mapStrings Response::createCGIHeaders(Request const &request)
+{
+	t_mapStrings cgiHeaders;
+	cgiHeaders["REQUEST_METHOD"] = request.getStartLine().method;
+	cgiHeaders["QUERY_STRING"] = _requestQuery;
+	cgiHeaders["REDIRECT_STATUS"] = "200";
+	cgiHeaders["SCRIPT_NAME"] = _requestFile;
+	cgiHeaders["PATH_TRANSLATED"] = _absolutePath;
+	cgiHeaders["PATH_INFO"] = _requestFile;
+	cgiHeaders["GATEWAY_INTERFACE"] = "CGI/1.1";
+	cgiHeaders["SERVER_SOFTWARE"] = "ft_webserv/1.0";
+	string listenAddress = "127.0.0.1";
+	string listenPort = "8080";
+	t_vecString listenValue = getValueOfServer("listen");
+	if (listenValue.size() != 0)
+	{
+		listenAddress = Utils::getListenAddress(listenValue);
+		listenPort = Utils::getListenPort(listenValue);
+	}
+	cgiHeaders["SERVER_NAME"] = listenAddress;
+	cgiHeaders["SERVER_PORT"] = listenPort;
+	cgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1";
+	return cgiHeaders;
+}
 
 std::size_t Utils::lenLongestPrefix(char const str1[], char const str2[])
 {
