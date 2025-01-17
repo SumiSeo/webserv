@@ -70,6 +70,7 @@ class Response
 	WebServer::Location _locationBlock;
 	std::string _requestFile;
 	std::string _requestQuery;
+	t_mapStrings _contentType;
 	
 	/* Methods */
 	bool handleCGI(Request const &request, std::string const &cgiExecutable, std::string const &pathname);
@@ -82,6 +83,8 @@ class Response
 	t_vecString getValueOfServer(std::string const &target);
 	void splitRequestTarget(std::string const &requestTarget);
 	void parseCGIResponse();
+	void initContentType();
+	std::string getContentType(std::string const &file);
 };
 
 class MyFileDescriptor
