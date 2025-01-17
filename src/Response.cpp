@@ -29,6 +29,8 @@ namespace Utils
 	std::size_t lenLongestPrefix(char const str1[], char const str2[]);
 	bool isDirectory(char const pathname[]);
 	string trimString(string const &input, string const &charset);
+	string getListenAddress(t_vecString const &listenValue);
+	string getListenPort(t_vecString const &listenValue);
 }
 
 // --- Public Methods --- //
@@ -60,6 +62,10 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	_responseComplete(false),
 	_serverBlock(configs)
 {
+	if(isError(request))
+	{
+		std::cout<<"THERE IS ERROR"<<std::endl;
+	}
 	string requestTarget = request.getStartLine().requestTarget;
 	string locationKey = getLocationBlock(requestTarget);
 	if (locationKey.empty())
@@ -100,10 +106,6 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 		pathname += index.at(0);
 	}
 
-	if(isError(request))
-	{
-		std::cout<<"THERE IS ERROR"<<std::endl;
-	}
 	if(isCGI(configs._locations.at(locationKey)))
 	{
 		if (!handleCGI(request, getValueOfLocation("cgi")[0], pathname))
@@ -232,6 +234,20 @@ bool Response::handleCGI(Request const &request, string const &cgiExecutable, st
 		cgiHeaders["SCRIPT_NAME"] = _requestFile;
 		cgiHeaders["PATH_TRANSLATED"] = pathname;
 		cgiHeaders["PATH_INFO"] = _requestFile;
+		cgiHeaders["GATEWAY_INTERFACE"] = "CGI/1.1";
+		cgiHeaders["SERVER_SOFTWARE"] = "ft_webserv/1.0";
+		string listenAddress = "127.0.0.1";
+		string listenPort = "8080";
+		t_vecString listenValue = getValueOfServer("listen");
+		if (listenValue.size() != 0)
+		{
+			listenAddress = Utils::getListenAddress(listenValue);
+			listenPort = Utils::getListenPort(listenValue);
+		}
+		cgiHeaders["SERVER_NAME"] = listenAddress;
+		cgiHeaders["SERVER_PORT"] = listenPort;
+		cgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1";
+
 		char **envp = headersToEnv(headers, cgiHeaders);
 		if (envp == NULL)
 			goto endCGI;
@@ -463,4 +479,26 @@ bool Utils::isDirectory(char const pathname[])
 //		start = 0;
 //	std::size_t end = input.find_last_not_of(charset);
 //	return input.substr(start, end - start + 1);
+//}
+//
+//string Utils::getListenAddress(t_vecString const &listenValue)
+//{
+//	if (listenValue.size() == 0)
+//		return string();
+//	string const &value = listenValue[0];
+//	std::size_t pos = value.rfind(':');
+//	if (pos == string::npos)
+//		return string();
+//	return value.substr(0, pos);
+//}
+//
+//string Utils::getListenPort(t_vecString const &listenValue)
+//{
+//	if (listenValue.size() == 0)
+//		return string();
+//	string const &value = listenValue[0];
+//	std::size_t pos = value.rfind(':');
+//	if (pos == string::npos)
+//		return string();
+//	return value.substr(pos + 1);
 //}
