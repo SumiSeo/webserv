@@ -58,6 +58,7 @@ class WebServer
 	int _epollFd;
 	std::map<int, Request> _requests;
 	std::map<int, Response> _responses;
+	std::map<int, int> _cgiFdToResponseFd;
 
 	/* Methods */
 	WebServer();

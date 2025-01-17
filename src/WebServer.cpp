@@ -371,28 +371,60 @@ void WebServer::loop()
 					_requests[clientFd] = Request(clientFd);
 					continue;
 				}
-
-				Request &request = _requests[fd];
-
-				Request::e_IOReturn recvReturn = request.retrieve();
-				if (recvReturn == Request::IO_ERROR || recvReturn == Request::IO_DISCONNECT)
+				else if (_requests.find(fd) != _requests.end())
 				{
-					if (recvReturn == Request::IO_ERROR)
-						std::perror("recv");
-					shouldDisconnect = true;
-				}
-				else
-				{
-					Request::e_phase phase = request.parse();
-					if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
+					Request &request = _requests[fd];
+
+					Request::e_IOReturn recvReturn = request.retrieve();
+					if (recvReturn == Request::IO_ERROR || recvReturn == Request::IO_DISCONNECT)
 					{
-						_responses[fd] = Response(request, _servers[0]);
-						
-						// TODO: Create a response for either of these 2 phases
-
+						if (recvReturn == Request::IO_ERROR)
+							std::perror("recv");
+						shouldDisconnect = true;
+					}
+					else
+					{
+						Request::e_phase phase = request.parse();
+						if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
+						{
+							_responses[fd] = Response(request, _servers[0]);
+							Response &response = _responses[fd];
+							int const &cgiFd = response.getFdCGI();
+							if (cgiFd != -1)
+							{
+								std::memset(&event, 0, sizeof(event));
+								event.events = EPOLLIN | EPOLLOUT;
+								event.data.fd = cgiFd;
+								if(epoll_ctl(_epollFd, EPOLL_CTL_ADD, cgiFd, &event) == -1)
+								{
+									std::perror("epoll_ctl(EPOLL_CTL_ADD)");
+									close(cgiFd);
+									response.setEndCGI();
+								}
+								else
+									_cgiFdToResponseFd[cgiFd] = fd;
+							}
+							
+							// TODO: Create a response for either of these 2 phases
+							// we will create a map for response 
+							// int fd of request 
+							// key = int (fd), value = Response class
+						}
 					}
 				}
-
+				else if (_cgiFdToResponseFd.find(fd) != _cgiFdToResponseFd.end())
+				{
+					int clientFd = _cgiFdToResponseFd[fd];
+					Response &response = _responses[clientFd];
+					Response::e_IOReturn recvReturn = response.retrieve();
+					if (recvReturn == Response::IO_ERROR || recvReturn == Response::IO_DISCONNECT)
+					{
+						if (recvReturn == Response::IO_ERROR)
+							std::perror("recv");
+						response.setEndCGI();
+						shouldDisconnect = true;
+					}
+				}
 			}
 			if (!shouldDisconnect && events[i].events & EPOLLOUT)
 			{
