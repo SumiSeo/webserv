@@ -62,6 +62,7 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	_responseComplete(false),
 	_serverBlock(configs)
 {
+	initContentType();
 	if(isError(request))
 	{
 		std::cout<<"THERE IS ERROR"<<std::endl;
@@ -444,6 +445,45 @@ void Response::parseCGIResponse()
 	_buffer += "\r\n" + _cgiData;
 	string().swap(_cgiData);
 	_responseComplete = true;
+}
+
+void Response::initContentType()
+{
+	_contentType["html"] = "text/html";
+	_contentType["css"] = "text/css";
+	_contentType["xml"] = "text/xml";
+	_contentType["txt"] = "text/plain";
+	_contentType["gif"] = "image/gif";
+	_contentType["jpg"] = "image/jpeg";
+	_contentType["jpeg"] = "image/jpeg";
+	_contentType["png"] = "image/png";
+	_contentType["ico"] = "image/x-ico";
+	_contentType["bmp"] = "image/x-ms-bmp";
+	_contentType["webp"] = "image/webp";
+	_contentType["mp3"] = "audio/mpeg";
+	_contentType["ogg"] = "audio/ogg";
+	_contentType["m4a"] = "audio/x-m4a";
+	_contentType["mp4"] = "video/mp4";
+	_contentType["mpg"] = "video/mpeg";
+	_contentType["mpeg"] = "video/mpeg";
+	_contentType["mov"] = "video/quicktime";
+	_contentType["webm"] = "video/webm";
+	_contentType["avi"] = "video/x-msvideo";
+	_contentType["js"] = "application/javascript";
+	_contentType["json"] = "application/json";
+	_contentType["pdf"] = "application/pdf";
+	_contentType["zip"] = "application/zip";
+}
+
+string Response::getContentType(string const &file)
+{
+	std::size_t pos = file.rfind(".");
+	if (pos == string::npos)
+		return "application/octet-stream";
+	string extension = file.substr(pos + 1);
+	if (_contentType.find(extension) == _contentType.end())
+		return "application/octet-stream";
+	return _contentType[extension];
 }
 
 MyFileDescriptor::MyFileDescriptor(int fd):
