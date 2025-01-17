@@ -125,7 +125,7 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	std::cout << "fd check" << request.getFd()<<std::endl;
 	std::cout<<"buffer :" << _buffer <<std::endl;
 	int fd = request.getFd();
-	send(fd, _buffer.c_str(), _buffer.size(), MSG_OOB);
+	send(fd, _buffer.c_str(), _buffer.size(), 0);
 }	
 
 Response::~Response()
@@ -213,7 +213,7 @@ std::string Response::getDefaultHeaders(Request const &request)
 	std::string formattedGMT = formattedDate.append("GMT");
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
-	std::string url = "Server: " + server.append(version) + "\r\n" + "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
 	return url;
 }
 
