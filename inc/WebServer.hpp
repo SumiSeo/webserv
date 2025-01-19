@@ -33,7 +33,7 @@ class WebServer
 {
   public:
 	/* Typedefs */
-	typedef std::vector<std::string> t_vecString;
+	typedef std::vector<std::string> t_vecStrings;
 
 	/* Methods */
 	WebServer(char const fileName[]);
@@ -59,19 +59,21 @@ class WebServer
 	WebServer &operator=(WebServer const &original);
 
 	// -- Main functions -- //
-	t_vecString readFile(char const fileName[]);
-	void searchTokens(t_vecString const &tokens);
+	t_vecStrings readFile(char const fileName[]);
+	void searchTokens(t_vecStrings const &tokens);
+	bool isValidConfig() const;
 
 	// -- Utils functions -- //
-	void parseTokens(t_vecString::const_iterator start,
-		t_vecString::const_iterator end);
-	void tokenToMap(t_vecString::const_iterator start,
-		t_vecString::const_iterator end);
-	void LocationToMap(t_vecString::const_iterator start,
-		t_vecString::const_iterator end);
+	void parseTokens(t_vecStrings::const_iterator start,
+		t_vecStrings::const_iterator end);
+	void tokenToMap(t_vecStrings::const_iterator start,
+		t_vecStrings::const_iterator end);
+	void LocationToMap(t_vecStrings::const_iterator start,
+		t_vecStrings::const_iterator end);
 	static void *get_in_addr(struct sockaddr *sa);
 	int createServer();
 	bool handleCGIInput(int fd);
+	bool isValidValue(std::string const &key, t_vecStrings const &values) const;
 
 	// -- debugging functions -- //
 	void printKeyValues();

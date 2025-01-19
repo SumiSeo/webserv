@@ -21,7 +21,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-typedef vector<string> t_vecString;
+typedef vector<string> t_vecStrings;
 
 namespace
 {
@@ -56,20 +56,21 @@ namespace
 namespace Utils
 {
 	void sigchld_handler(int s);
-	t_vecString split(string const &str, char delim);
+	t_vecStrings split(string const &str, char delim);
 	bool isValidKeyServer(string const &key);
 	bool isValidKeyLocation(string const &key);
-	string getListenAddress(t_vecString const &listenValue);
-	string getListenPort(t_vecString const &listenValue);
+	string getListenAddress(t_vecStrings const &listenValue);
+	string getListenPort(t_vecStrings const &listenValue);
 };
 
 // --- Public --- //
 WebServer::WebServer(char const fileName[]):
 	_epollFd(-1)
 {
-	t_vecString listTokens = readFile(fileName);
+	t_vecStrings listTokens = readFile(fileName);
 	searchTokens(listTokens);
-	if (_servers.size() == 0 || _servers[0]._locations.size() == 0)
+	if (_servers.size() == 0 || _servers[0]._locations.size() == 0
+		|| !isValidConfig())
 		throw std::runtime_error("Not a valid config file");
 	createServer();
 	if (_servers.size() == 0)
@@ -100,9 +101,9 @@ WebServer &WebServer::operator=(WebServer const &)
 	return *this;
 }
 
-WebServer::t_vecString WebServer::readFile(char const filename[])
+t_vecStrings WebServer::readFile(char const filename[])
 {
-	t_vecString listTokens;
+	t_vecStrings listTokens;
 
 	ifstream infile(filename);
 	infile.exceptions(ifstream::badbit);
@@ -114,19 +115,19 @@ WebServer::t_vecString WebServer::readFile(char const filename[])
 		stringstream stream(content);
 		while (stream >> content)
 		{
-			t_vecString tokens(Utils::split(content, ';'));
-			for (t_vecString::const_iterator it(tokens.begin()); it != tokens.end(); ++it)
+			t_vecStrings tokens(Utils::split(content, ';'));
+			for (t_vecStrings::const_iterator it(tokens.begin()); it != tokens.end(); ++it)
 				listTokens.push_back(*it);
 		}
 	}
 	return (listTokens);
 }
 
-void WebServer::searchTokens(t_vecString const &tokens)
+void WebServer::searchTokens(t_vecStrings const &tokens)
 {
 	string const server = "server";
 
-	for (t_vecString::const_iterator it = tokens.begin(); it != tokens.end(); it++)
+	for (t_vecStrings::const_iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
 		string value = *it;
 		if (value == server)
@@ -138,19 +139,59 @@ void WebServer::searchTokens(t_vecString const &tokens)
 	printKeyValues();
 }
 
-void WebServer::parseTokens(t_vecString::const_iterator start,
-	t_vecString::const_iterator end)
+bool WebServer::isValidConfig() const
+{
+	typedef map<string, t_vecStrings> t_mapStringVecStrings;
+	typedef map<string, Location> t_mapStringLoc;
+
+	for (vector<Server>::const_iterator serverIt = _servers.begin(); serverIt != _servers.end(); ++serverIt)
+	{
+		for (t_mapStringVecStrings::const_iterator keyValueIt = serverIt->_configs.begin(); keyValueIt != serverIt->_configs.end(); ++keyValueIt)
+		{
+			t_vecStrings const &values = keyValueIt->second;
+			if (values.empty())
+				return false;
+
+			string const &key = keyValueIt->first;
+			if (!isValidValue(key, values))
+				return false;
+		}
+		bool mainLocationFound = false;
+		for (t_mapStringLoc::const_iterator locationIt = serverIt->_locations.begin(); locationIt != serverIt->_locations.end(); ++locationIt)
+		{
+			Location const &location = locationIt->second;
+			for (t_mapStringVecStrings::const_iterator keyValueIt = location._pairs.begin(); keyValueIt != location._pairs.end(); ++keyValueIt)
+			{
+				t_vecStrings const &values = keyValueIt->second;
+				if (values.empty())
+					return false;
+
+				string const &key = keyValueIt->first;
+				if (!isValidValue(key, values))
+					return false;
+			}
+			if (locationIt->first == "/")
+				mainLocationFound = true;
+		}
+		if (!mainLocationFound)
+			return false;
+	}
+	return true;
+}
+
+void WebServer::parseTokens(t_vecStrings::const_iterator start,
+	t_vecStrings::const_iterator end)
 {
 	if (start == end || *start != "{")
 		throw std::runtime_error("Missing token '{'");
 
 	start++;
 	int depthCheck = 1;
-	for (t_vecString::const_iterator it = start; it != end; it++)
+	for (t_vecStrings::const_iterator it = start; it != end; it++)
 	{
 		if (*it == "server" || *it == "{" || *it == "}")
 			continue ;
-		t_vecString::const_iterator restart = it;
+		t_vecStrings::const_iterator restart = it;
 		while (it != end)
 		{
 			if (*it == "{") 
@@ -176,8 +217,8 @@ void WebServer::parseTokens(t_vecString::const_iterator start,
 	}
 }
 
-void WebServer::tokenToMap(t_vecString::const_iterator start,
-	t_vecString::const_iterator end)
+void WebServer::tokenToMap(t_vecStrings::const_iterator start,
+	t_vecStrings::const_iterator end)
 {
 	Server &server = _servers.back();
 
@@ -191,7 +232,7 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 				break; 
 
 			Location location;
-			t_vecString locationValues;
+			t_vecStrings locationValues;
 			string locationKey = *start;
 			++start;
 			while (start != end && *start != "}") 
@@ -225,8 +266,8 @@ void WebServer::tokenToMap(t_vecString::const_iterator start,
 	{
 		if (!Utils::isValidKeyServer(*start))
 			throw std::runtime_error("Invalid key found server block");
-		t_vecString values;
-		for (t_vecString::const_iterator it = start; it != end;)
+		t_vecStrings values;
+		for (t_vecStrings::const_iterator it = start; it != end;)
 		{
 			++it;
 			if (it != end)
@@ -518,10 +559,39 @@ bool WebServer::handleCGIInput(int fd)
 	}
 	return false;
 }
-//////////** ---Static functions-- **///////////
-t_vecString Utils::split(string const &str, char delim)
+
+bool WebServer::isValidValue(std::string const &key, t_vecStrings const &values) const
 {
-	t_vecString	words;
+	if (key == "root")
+	{
+		string const &value = values.at(0);
+		return value.at(value.size() - 1) == '/';
+	}
+	else if (key == "autoindex")
+	{
+		string const &value = values.at(0);
+		return value == "on" || value == "off";
+	}
+	else if (key == "error_page")
+		return values.size() > 1;
+	else if (key == "index")
+	{
+		string const &value = values.at(0);
+		return value.at(value.size() - 1) != '/';
+	}
+	else if (key == "return")
+		return values.size() > 1;
+	else if (key == "upload_path")
+	{
+		string const &value = values.at(0);
+		return value.at(value.size() - 1) == '/';
+	}
+	return true;
+}
+//////////** ---Static functions-- **///////////
+t_vecStrings Utils::split(string const &str, char delim)
+{
+	t_vecStrings	words;
 
 	std::size_t pos = 0;
 	while (true)
@@ -568,7 +638,7 @@ void Utils::sigchld_handler(int s)
 	errno = saved_errno;
 }
 
-string Utils::getListenAddress(t_vecString const &listenValue)
+string Utils::getListenAddress(t_vecStrings const &listenValue)
 {
 	if (listenValue.size() == 0)
 		return string();
@@ -579,7 +649,7 @@ string Utils::getListenAddress(t_vecString const &listenValue)
 	return value.substr(0, pos);
 }
 
-string Utils::getListenPort(t_vecString const &listenValue)
+string Utils::getListenPort(t_vecStrings const &listenValue)
 {
 	if (listenValue.size() == 0)
 		return string();
