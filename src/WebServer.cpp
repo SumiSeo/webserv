@@ -34,7 +34,7 @@ namespace
 		"client_max_body_size",
 		"allow_methods",
 		"index",
-		"cgi",
+		"return",
 		NULL,
 	};
 	char const *const LOCATION_KEYS[] = {
@@ -44,8 +44,9 @@ namespace
 		"client_max_body_size",
 		"allow_methods",
 		"index",
-		"cgi",
 		"return",
+		"cgi",
+		"upload_path",
 		NULL,
 	};
 	char const *const DEFAULT_PORT = "8080";

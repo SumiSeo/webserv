@@ -146,7 +146,8 @@ Request::e_phase Request::parse()
 		else
 		{
 			filterServers();
-			parseBody();
+			if (verifyRequest() == STATUS_FUNCTION_NONE)
+				parseBody();
 		}
 	}
 	if (_phase == PHASE_BODY)
@@ -370,16 +371,39 @@ void Request::filterServers()
 		_serverIndex = index;
 		break;
 	}
-
 	Server const &server = (*_servers)[_serverIndex];
 	_locationKey = server.searchLocationKey(_startLine.requestTarget);
+}
+
+Request::e_statusFunction Request::verifyRequest()
+{
+	Server const &server = (*_servers)[_serverIndex];
 	Location const &locationBlock = server._locations.at(_locationKey);
+	if (!locationBlock.getValuesOf("allow_methods").empty())
+	{
+		if (!locationBlock.checkValuesOf("allow_methods", _startLine.method))
+		{
+			_phase = PHASE_ERROR;
+			_statusCode = METHOD_NOT_ALLOWED;
+			return STATUS_FUNCTION_SHOULD_RETURN;
+		}
+	}
+	else
+	{
+		if (!server.checkValuesOf("allow_methods", _startLine.method))
+		{
+			_phase = PHASE_ERROR;
+			_statusCode = METHOD_NOT_ALLOWED;
+			return STATUS_FUNCTION_SHOULD_RETURN;
+		}
+	}
 	string maxBodySize = locationBlock.getValueOf("client_max_body_size");
 	if (maxBodySize.empty())
 		maxBodySize = server.getValueOf("client_max_body_size");
 	if (maxBodySize.empty())
 		maxBodySize = "1M";
 	_maxBodySize = parseSize(maxBodySize);
+	return STATUS_FUNCTION_NONE;
 }
 
 Request::e_statusFunction Request::readChunkSize()
