@@ -28,7 +28,7 @@ class Response
 	/* Methods */
 	Response();
 	Response(Response const &src);
-	Response(Request const &request, WebServer::Server const &config);
+	Response(Request const &request, Server const &config);
 	~Response();
 
 	Response &operator=(Response const &rhs);
@@ -66,9 +66,9 @@ class Response
 	bool _responseComplete;
 	ResponseLine _responseLine;
 	std::string _headers;
-	WebServer::Server _serverBlock;
+	Server _serverBlock;
 	std::string _locationKey;
-	WebServer::Location _locationBlock;
+	Location _locationBlock;
 	std::string _requestFile;
 	std::string _requestQuery;
 	std::string _absolutePath;
@@ -80,15 +80,13 @@ class Response
 	int isCGI() const;
 	std::string getFileContent(std::string const &pathname) const;
 	char **headersToEnv(t_mapStrings const &headers, t_mapStrings const &cgiHeaders) const;
-	std::string getLocationBlock(std::string const &requestTarget) const;
-	t_vecString getValueOfLocation(std::string const &target);
-	t_vecString getValueOfServer(std::string const &target);
 	void splitRequestTarget(std::string const &requestTarget);
 	void parseCGIResponse();
 	int setLocationBlock(Request const &request);
 	int setAbsolutePathname();
 	t_mapStrings createCGIHeaders(Request const &request);
-	t_vecString getValueOf(std::string const &target);
+	t_vecString getValuesOf(std::string const &target);
+	std::string getValueOf(std::string const &target);
 	void initContentType();
 	std::string getContentType(std::string const &file);
 };

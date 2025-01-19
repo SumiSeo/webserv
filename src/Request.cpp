@@ -1,15 +1,19 @@
-
-#include <sys/socket.h>
 #include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
-#include <sstream>
 #include <iostream>
+#include <limits>
+#include <sstream>
+#include <sys/socket.h>
+
 #include "Request.hpp"
 
 using std::string;
 using std::stringstream;
+using std::vector;
+
+typedef vector<string> t_vecStrings;
 
 namespace
 {
@@ -22,6 +26,8 @@ namespace
 		"DELETE",
 		NULL
 	};
+
+	std::size_t parseSize(string const &size);
 }
 
 namespace Utils
@@ -56,6 +62,7 @@ Request::Request(Request const &src):
 	_body(src._body),
 	_statusCode(src._statusCode),
 	_servers(src._servers),
+	_locationKey(src._locationKey),
 	_serverIndex(src._serverIndex),
 	_address(src._address),
 	_port(src._port),
@@ -100,6 +107,7 @@ Request &Request::operator=(Request const &rhs)
 	_body = rhs._body;
 	_statusCode = rhs._statusCode;
 	_servers = rhs._servers;
+	_locationKey = rhs._locationKey;
 	_serverIndex = rhs._serverIndex;
 	_address = rhs._address;
 	_port = rhs._port;
@@ -130,7 +138,16 @@ Request::e_phase Request::parse()
 		parseHeader();
 	if (_phase == PHASE_HEADERS)
 	{
-		parseBody();
+		if (_headers.find("HOST") == _headers.end())
+		{
+			_phase = PHASE_ERROR;
+			_statusCode = BAD_REQUEST;
+		}
+		else
+		{
+			filterServers();
+			parseBody();
+		}
 	}
 	if (_phase == PHASE_BODY)
 		_phase = PHASE_COMPLETE;
@@ -175,6 +192,25 @@ int Request::getFd() const
 	return _fd;
 }
 
+string const &Request::getAddress() const
+{
+	return _address;
+}
+
+string const &Request::getPort() const
+{
+	return _port;
+}
+
+std::size_t Request::getServerIndex() const
+{
+	return _serverIndex;
+}
+
+string Request::getLocationKey() const
+{
+	return _locationKey;
+}
 
 // --- Private --- //
 
@@ -297,6 +333,53 @@ void Request::parseBody()
 
 void Request::filterServers()
 {
+	string host = _headers["HOST"].substr(0, _headers["HOST"].find(":"));
+	t_vecServers const &servers = *_servers;
+	std::size_t index = 0;
+	for (t_vecServers::const_iterator it = servers.begin(); it != servers.end(); ++it, ++index)
+	{
+		if (!it->checkValuesOf("server_name", host))
+			continue;
+
+		{
+			struct sockaddr_in addr;
+			socklen_t len = sizeof(addr);
+			if (getsockname(_socketFd, reinterpret_cast<sockaddr*>(&addr), &len) == -1)
+				continue;
+
+			char ipStr[INET_ADDRSTRLEN];
+			inet_ntop(AF_INET, &addr.sin_addr, ipStr, sizeof(ipStr));
+			string address = ipStr;
+			stringstream number;
+			number << ntohs(addr.sin_port);
+			string port = number.str();
+
+			string listenAddress = "127.0.0.1";
+			string listenPort = "8080";
+			string listenValue = it->getValueOf("listen");
+			if (!listenValue.empty())
+			{
+				std::size_t pos = listenValue.rfind(":");
+				listenAddress = listenValue.substr(0, pos);
+				listenPort = listenValue.substr(pos + 1);
+			}
+
+			if (listenAddress != address || listenPort != port)
+				continue;
+		}
+		_serverIndex = index;
+		break;
+	}
+
+	Server const &server = (*_servers)[_serverIndex];
+	_locationKey = server.searchLocationKey(_startLine.requestTarget);
+	Location const &locationBlock = server._locations.at(_locationKey);
+	string maxBodySize = locationBlock.getValueOf("client_max_body_size");
+	if (maxBodySize.empty())
+		maxBodySize = server.getValueOf("client_max_body_size");
+	if (maxBodySize.empty())
+		maxBodySize = "1M";
+	_maxBodySize = parseSize(maxBodySize);
 }
 
 Request::e_statusFunction Request::readChunkSize()
@@ -313,8 +396,16 @@ Request::e_statusFunction Request::readChunkSize()
 		_phase = PHASE_ERROR;
 		return STATUS_FUNCTION_SHOULD_RETURN;
 	}
+
 	_buffer = _buffer.substr(pos + std::strlen(HTTP_DELIMITER));
 	_body.len += static_cast<std::size_t>(contentLen);
+	if (_body.len > _maxBodySize)
+	{
+		_statusCode = CONTENT_TOO_LARGE;
+		_phase = PHASE_ERROR;
+		return STATUS_FUNCTION_SHOULD_RETURN;
+	}
+
 	return STATUS_FUNCTION_NONE;
 }
 
@@ -402,6 +493,13 @@ Request::e_statusFunction Request::readBodyContent(char const contentLength[])
 	if (*pEnd != '\0' || contentLen < 0 || errno == ERANGE)
 	{
 		_statusCode = BAD_REQUEST;
+		_phase = PHASE_ERROR;
+		return STATUS_FUNCTION_SHOULD_RETURN;
+	}
+
+	if (static_cast<std::size_t>(contentLen) > _maxBodySize)
+	{
+		_statusCode = CONTENT_TOO_LARGE;
 		_phase = PHASE_ERROR;
 		return STATUS_FUNCTION_SHOULD_RETURN;
 	}
@@ -512,6 +610,45 @@ bool Utils::isValidMethod(string const &method)
 			return true;
 	}
 	return false;
+}
+
+namespace
+{
+	std::size_t parseSize(string const &size)
+	{
+		char *pEnd = NULL;
+		long num = std::strtol(size.c_str(), &pEnd, 10);
+		if (errno == ERANGE || num < 0)
+			return 0;
+
+		long mult = 0;
+		switch (std::toupper(*pEnd))
+		{
+			case 'B':
+				mult = 1l;
+				break;
+			case 'K':
+				mult = 1000l;
+				break;
+			case 'M':
+				mult = 1000l * 1000l;
+				break;
+			case 'G':
+				mult = 1000 * 1000l * 1000l;
+				break;
+			default:
+				mult = 0;
+				break;
+		}
+		if (mult == 0)
+			return 0;
+
+		unsigned long res = std::numeric_limits<unsigned long>::max() / static_cast<unsigned long>(mult);
+		if (static_cast<unsigned long>(num) > res)
+			return 0;
+
+		return static_cast<std::size_t>(num) * static_cast<std::size_t>(mult);
+	}
 }
 
 // -- debugging fuction --//

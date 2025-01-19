@@ -391,7 +391,7 @@ void WebServer::loop()
 						Request::e_phase phase = request.parse();
 						if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
 						{
-							_responses[fd] = Response(request, _servers[0]);
+							_responses[fd] = Response(request, _servers[request.getServerIndex()]);
 							Response &response = _responses[fd];
 							int const &cgiFd = response.getFdCGI();
 							if (cgiFd != -1)
@@ -490,16 +490,16 @@ int WebServer::createServer()
 		if(p == NULL)
 		{
 			std::cerr << "server : failed to bind" << std::endl;
-			return 1;
+			continue;
 		}
 		if(listen(socketFd, 10) == -1)
 		{
 			std::perror("listen");
-			return 1;
+			close(socketFd);
+			continue;
 		}
 		_socketFds.insert(socketFd);
 	}
-	//loop(socketFd);
 	return 0;
 }
 

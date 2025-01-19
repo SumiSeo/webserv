@@ -1,10 +1,12 @@
-#ifndef __SERVER_HPP__
-# define __SERVER_HPP__
+#ifndef __WEBSERVER_HPP__
+# define __WEBSERVER_HPP__
 
 # include <map>
 # include <set>
 # include <string>
 # include <vector>
+
+# include "Server.hpp"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -30,23 +32,13 @@ class Request;
 class WebServer
 {
   public:
+	/* Typedefs */
+	typedef std::vector<std::string> t_vecString;
+
 	/* Methods */
 	WebServer(char const fileName[]);
 	~WebServer();
 
-	// Typedefs
-	typedef std::vector<std::string> t_vecString;
-
-	/* New Variable Types */
-	struct	Location
-	{
-		std::map<std::string, t_vecString> _pairs;
-	};
-	struct Server
-	{
-		std::map<std::string, t_vecString> _configs;
-		std::map<std::string, Location> _locations;
-	};
 	void loop();
 
   protected:

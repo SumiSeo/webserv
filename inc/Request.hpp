@@ -13,7 +13,7 @@ class Request
 {
   private:
 	/* Typedefs */
-	typedef std::vector<WebServer::Server> t_vecServers;
+	typedef std::vector<Server> t_vecServers;
 
   public:
 	/* Typedefs */
@@ -77,6 +77,8 @@ class Request
 	int getFd() const; 
 	std::string const &getAddress() const;
 	std::string const &getPort() const;
+	std::size_t getServerIndex() const;
+	std::string getLocationKey() const;
 
   protected:
 
@@ -98,6 +100,7 @@ class Request
 	MessageBody _body;
 	e_statusCode _statusCode;
 	t_vecServers *_servers;
+	std::string _locationKey;
 	int _serverIndex;
 	std::string _address;
 	std::string _port;
@@ -128,7 +131,6 @@ class Request
 	void printRequest();
 	void printStartLine();
 
-	
 };
 
 #endif

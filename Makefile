@@ -18,6 +18,8 @@ FILES	:=	main.cpp		\
 			Request.cpp		\
 			Response.cpp	\
 			WebServer.cpp	\
+			Location.cpp	\
+			Server.cpp		\
 
 SRC_DIR	:=	src
 OBJ_DIR	:=	obj
