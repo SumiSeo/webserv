@@ -101,7 +101,7 @@ Response::Response(Request const &request, Server const &configs):
 		//if it is not cgi static response should be sent to client
 	}
 	string responseLine = createResponseLine(request);
-	string responseHeaders = responseLine.append(getDefaultHeaders(request));
+	string responseHeaders = responseLine.append(getDefaultHeaders());
 	std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
 	string responseBody = getFileContent(_absolutePath);
 	string _buffer = responseHeaders.append(responseBody);
@@ -202,7 +202,7 @@ std::string Response::createResponseLine(Request const &request, std::string con
 	return responseLine;
 }
 
-std::string Response::getDefaultHeaders(Request const &request)
+std::string Response::getDefaultHeaders()
 {
 	time_t now;
 	time(&now);
@@ -213,8 +213,8 @@ std::string Response::getDefaultHeaders(Request const &request)
 	std::string formattedGMT = formattedDate.append("GMT");
 	std::string contentType = getContentType("index.html");
 	std::string server = "ft_webserv";
-	std::string version = "/" + request.getStartLine().httpVersion;
-	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
+	std::string version = "/1.0";
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
 	return url;
 }
 
@@ -414,7 +414,7 @@ void Response::parseCGIResponse()
 	}
 	else
 		_buffer = "HTTP/1.1 200 OK\r\n";
-	// _buffer += getDefaultHeaders() + "\r\n";
+	_buffer += getDefaultHeaders() + "\r\n";
 	for (t_mapStrings::const_iterator it = cgiHeaders.begin(); it != cgiHeaders.end(); ++it)
 		_buffer += it->first + ": " + it->second + "\r\n";
 	{
