@@ -67,14 +67,7 @@ Response::Response(Request const &request, Server const &configs):
 	splitRequestTarget(request.getStartLine().requestTarget);
 	_locationKey = request.getLocationKey();
 	_locationBlock = _serverBlock._locations.at(_locationKey);
-	if (setAbsolutePathname() != 0)
-	{
-		// Sumi -> sending correct error message and display 404 page
-		// Also I have to add all status code
-
-		// TODO: set to error 404 not found in the response
-		return;
-	}
+	std::cout <<" @@@PATH CHECK " << _absolutePath << std::endl;
 	if (Utils::isDirectory(_absolutePath.c_str()))
 	{
 		string index = getValueOf("index");
@@ -116,11 +109,8 @@ Response::Response(Request const &request, Server const &configs):
 		int responseBodySize = responseBody.size();
 		string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
 		std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
-		std::cout << "HEADERS " << responseHeaders <<std::endl; 
 		string responseHeadersLine = responseHeaders + "\r\n";
 		_buffer = responseHeadersLine.append(responseBody);
-		std::cout << "fd check" << request.getFd()<<std::endl;
-		std::cout<<"buffer :" << _buffer <<std::endl;
 
 		//it ts is POST check and then if it is upload 
 		// I have to display bad request // 
@@ -339,7 +329,7 @@ bool Response::isError(Request const &request)
 		std::cout<<"Phase error"<< request.getPhase()<<std::endl;
 		return true;
 	}
-	if(request.getStatusCode()!= VALID && request.getStatusCode() >1 )
+	if(request.getStatusCode()!= OK && request.getStatusCode() >1 )
 	{
 	   std::cout<<"status code error"<<request.getStatusCode()<<std::endl;
 	   return true;
