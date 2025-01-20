@@ -227,7 +227,13 @@ string Request::getLocationKey() const
 void Request::reset()
 {
 	_phase = PHASE_EMPTY;
+	_startLine = StartLine();
+	_headers = t_mapString();
+	_body = MessageBody();
 	_statusCode = NONE;
+	_locationKey = string();
+	_serverIndex = 0;
+	_maxBodySize = 0;
 }
 
 // --- Private --- //
@@ -244,6 +250,7 @@ void Request::parseHeader()
 		if (end == 0)
 		{
 			_buffer.erase(0, std::strlen(HTTP_DELIMITER));
+			_phase = PHASE_HEADERS;
 			break;
 		}
 		if (end == std::string::npos)
@@ -257,7 +264,6 @@ void Request::parseHeader()
 	/* Debugging: These line belows will be deleted in the end */
 	printStartLine();
 	printRequest();
-	_phase = PHASE_HEADERS;
 }
 
 void Request::parseStartLine()
@@ -572,7 +578,7 @@ Request::e_statusFunction Request::readBodyContent(char const contentLength[])
 		_body.data += _buffer.substr(0, appendSize);
 		_body.len += appendSize;
 		_body.chunkCompleted = true;
-		_buffer = _buffer.substr(appendSize + std::strlen(HTTP_DELIMITER));
+		_buffer = _buffer.substr(appendSize);
 		_phase = PHASE_BODY;
 	}
 	return STATUS_FUNCTION_NONE;
