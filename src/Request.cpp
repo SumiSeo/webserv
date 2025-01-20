@@ -142,6 +142,8 @@ Request::e_phase Request::parse()
 		{
 			_phase = PHASE_ERROR;
 			_statusCode = BAD_REQUEST;
+									std::cout<<"4 "<<std::endl;
+
 		}
 		else
 		{
@@ -165,6 +167,8 @@ Request::e_phase Request::parse()
 		{
 			_phase = PHASE_ERROR;
 			_statusCode = BAD_REQUEST;
+			std::cout<<"5 Buffer size: " << _buffer.size()<<std::endl;
+
 		}
 	}
 	return _phase;
@@ -276,6 +280,7 @@ void Request::parseStartLine()
 		{
 			_phase = PHASE_ERROR;
 			_statusCode = BAD_REQUEST;
+			std::cout<<"1 "<<std::endl;
 			return;
 		}
 		_startLine.requestTarget = line.substr(targetPos + 1, targetPosEnd  - targetPos - 1 );
@@ -283,6 +288,8 @@ void Request::parseStartLine()
 		{
 			_phase = PHASE_ERROR;
 			_statusCode = BAD_REQUEST;
+						std::cout<<"2"<<std::endl;
+
 			return;
 		}
 		_startLine.httpVersion = line.substr(targetPosEnd + 1);
@@ -290,6 +297,8 @@ void Request::parseStartLine()
 		{
 			_phase = PHASE_ERROR;
 			_statusCode = BAD_REQUEST;
+						std::cout<<"3 "<<std::endl;
+
 			return;
 		}
 		_phase = PHASE_START_LINE;
@@ -442,6 +451,8 @@ Request::e_statusFunction Request::readChunkSize()
 	if (contentLen < 0 || errno == ERANGE)
 	{
 		_statusCode = BAD_REQUEST;
+								std::cout<<"6 "<<std::endl;
+
 		_phase = PHASE_ERROR;
 		return STATUS_FUNCTION_SHOULD_RETURN;
 	}
@@ -542,6 +553,8 @@ Request::e_statusFunction Request::readBodyContent(char const contentLength[])
 	if (*pEnd != '\0' || contentLen < 0 || errno == ERANGE)
 	{
 		_statusCode = BAD_REQUEST;
+								std::cout<<"7 "<<std::endl;
+
 		_phase = PHASE_ERROR;
 		return STATUS_FUNCTION_SHOULD_RETURN;
 	}
