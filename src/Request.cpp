@@ -1,15 +1,19 @@
-
-#include <sys/socket.h>
 #include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
-#include <sstream>
 #include <iostream>
+#include <limits>
+#include <sstream>
+#include <sys/socket.h>
+
 #include "Request.hpp"
 
 using std::string;
 using std::stringstream;
+using std::vector;
+
+typedef vector<string> t_vecStrings;
 
 namespace
 {
@@ -22,6 +26,8 @@ namespace
 		"DELETE",
 		NULL
 	};
+
+	std::size_t parseSize(string const &size);
 }
 
 namespace Utils
@@ -37,27 +43,53 @@ namespace Utils
 // --- Public --- //
 Request::Request():
 	_fd(-1),
+	_socketFd(-1),
 	_phase(PHASE_ERROR),
-	_statusCode(NONE)
+	_statusCode(NONE),
+	_servers(NULL),
+	_serverIndex(0),
+	_maxBodySize(0)
 {
 }
 
 Request::Request(Request const &src):
 	_fd(src._fd),
+	_socketFd(src._socketFd),
 	_phase(src._phase),
 	_buffer(src._buffer),
 	_startLine(src._startLine),
 	_headers(src._headers),
 	_body(src._body),
-	_statusCode(src._statusCode)
+	_statusCode(src._statusCode),
+	_servers(src._servers),
+	_locationKey(src._locationKey),
+	_serverIndex(src._serverIndex),
+	_address(src._address),
+	_port(src._port),
+	_maxBodySize(src._maxBodySize)
 {
 }
 
-Request::Request(int fd):
+Request::Request(int fd, int socketFd, t_vecServers *servers):
 	_fd(fd),
+	_socketFd(socketFd),
 	_phase(PHASE_EMPTY),
-	_statusCode(NONE)
+	_statusCode(NONE),
+	_servers(servers),
+	_serverIndex(0),
+	_maxBodySize(0)
 {
+	struct sockaddr_in addr;
+	socklen_t len = sizeof(addr);
+	if (getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != -1)
+	{
+		char ipStr[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &addr.sin_addr, ipStr, sizeof(ipStr));
+		_address = ipStr;
+		stringstream number;
+		number << ntohs(addr.sin_port);
+		_port = number.str();
+	}
 }
 
 Request::~Request()
@@ -67,12 +99,19 @@ Request::~Request()
 Request &Request::operator=(Request const &rhs)
 {
 	_fd = rhs._fd;
+	_socketFd = rhs._socketFd;
 	_phase = rhs._phase;
 	_buffer = rhs._buffer;
 	_startLine = rhs._startLine;
 	_headers = rhs._headers;
 	_body = rhs._body;
 	_statusCode = rhs._statusCode;
+	_servers = rhs._servers;
+	_locationKey = rhs._locationKey;
+	_serverIndex = rhs._serverIndex;
+	_address = rhs._address;
+	_port = rhs._port;
+	_maxBodySize = rhs._maxBodySize;
 	return *this;
 }
 
@@ -98,7 +137,19 @@ Request::e_phase Request::parse()
 	if (_phase == PHASE_START_LINE)
 		parseHeader();
 	if (_phase == PHASE_HEADERS)
-		parseBody();
+	{
+		if (_headers.find("HOST") == _headers.end())
+		{
+			_phase = PHASE_ERROR;
+			_statusCode = BAD_REQUEST;
+		}
+		else
+		{
+			filterServers();
+			if (verifyRequest() == STATUS_FUNCTION_NONE)
+				parseBody();
+		}
+	}
 	if (_phase == PHASE_BODY)
 		_phase = PHASE_COMPLETE;
 	if (_phase != PHASE_COMPLETE && _phase != PHASE_ERROR)
@@ -111,8 +162,6 @@ Request::e_phase Request::parse()
 	}
 	return _phase;
 }
-
-
 
 Request::StartLine const &Request::getStartLine() const
 {
@@ -144,6 +193,31 @@ int Request::getFd() const
 	return _fd;
 }
 
+string const &Request::getAddress() const
+{
+	return _address;
+}
+
+string const &Request::getPort() const
+{
+	return _port;
+}
+
+std::size_t Request::getServerIndex() const
+{
+	return _serverIndex;
+}
+
+string Request::getLocationKey() const
+{
+	return _locationKey;
+}
+
+void Request::reset()
+{
+	_phase = PHASE_EMPTY;
+	_statusCode = NONE;
+}
 
 // --- Private --- //
 
@@ -262,6 +336,81 @@ void Request::parseBody()
 	}
 	else
 		_phase = PHASE_BODY;
+	printBodyMessage();
+}
+
+void Request::filterServers()
+{
+	string host = _headers["HOST"].substr(0, _headers["HOST"].find(":"));
+	t_vecServers const &servers = *_servers;
+	std::size_t index = 0;
+	for (t_vecServers::const_iterator it = servers.begin(); it != servers.end(); ++it, ++index)
+	{
+		if (!it->checkValuesOf("server_name", host))
+			continue;
+
+		{
+			struct sockaddr_in addr;
+			socklen_t len = sizeof(addr);
+			if (getsockname(_socketFd, reinterpret_cast<sockaddr*>(&addr), &len) == -1)
+				continue;
+
+			char ipStr[INET_ADDRSTRLEN];
+			inet_ntop(AF_INET, &addr.sin_addr, ipStr, sizeof(ipStr));
+			string address = ipStr;
+			stringstream number;
+			number << ntohs(addr.sin_port);
+			string port = number.str();
+
+			string listenAddress = "127.0.0.1";
+			string listenPort = "8080";
+			string listenValue = it->getValueOf("listen");
+			if (!listenValue.empty())
+			{
+				std::size_t pos = listenValue.rfind(":");
+				listenAddress = listenValue.substr(0, pos);
+				listenPort = listenValue.substr(pos + 1);
+			}
+
+			if (listenAddress != address || listenPort != port)
+				continue;
+		}
+		_serverIndex = index;
+		break;
+	}
+	Server const &server = (*_servers)[_serverIndex];
+	_locationKey = server.searchLocationKey(_startLine.requestTarget);
+}
+
+Request::e_statusFunction Request::verifyRequest()
+{
+	Server const &server = (*_servers)[_serverIndex];
+	Location const &locationBlock = server._locations.at(_locationKey);
+	if (!locationBlock.getValuesOf("allow_methods").empty())
+	{
+		if (!locationBlock.checkValuesOf("allow_methods", _startLine.method))
+		{
+			_phase = PHASE_ERROR;
+			_statusCode = METHOD_NOT_ALLOWED;
+			return STATUS_FUNCTION_SHOULD_RETURN;
+		}
+	}
+	else
+	{
+		if (!server.checkValuesOf("allow_methods", _startLine.method))
+		{
+			_phase = PHASE_ERROR;
+			_statusCode = METHOD_NOT_ALLOWED;
+			return STATUS_FUNCTION_SHOULD_RETURN;
+		}
+	}
+	string maxBodySize = locationBlock.getValueOf("client_max_body_size");
+	if (maxBodySize.empty())
+		maxBodySize = server.getValueOf("client_max_body_size");
+	if (maxBodySize.empty())
+		maxBodySize = "1M";
+	_maxBodySize = parseSize(maxBodySize);
+	return STATUS_FUNCTION_NONE;
 }
 
 Request::e_statusFunction Request::readChunkSize()
@@ -278,8 +427,16 @@ Request::e_statusFunction Request::readChunkSize()
 		_phase = PHASE_ERROR;
 		return STATUS_FUNCTION_SHOULD_RETURN;
 	}
+
 	_buffer = _buffer.substr(pos + std::strlen(HTTP_DELIMITER));
 	_body.len += static_cast<std::size_t>(contentLen);
+	if (_body.len > _maxBodySize)
+	{
+		_statusCode = CONTENT_TOO_LARGE;
+		_phase = PHASE_ERROR;
+		return STATUS_FUNCTION_SHOULD_RETURN;
+	}
+
 	return STATUS_FUNCTION_NONE;
 }
 
@@ -367,6 +524,13 @@ Request::e_statusFunction Request::readBodyContent(char const contentLength[])
 	if (*pEnd != '\0' || contentLen < 0 || errno == ERANGE)
 	{
 		_statusCode = BAD_REQUEST;
+		_phase = PHASE_ERROR;
+		return STATUS_FUNCTION_SHOULD_RETURN;
+	}
+
+	if (static_cast<std::size_t>(contentLen) > _maxBodySize)
+	{
+		_statusCode = CONTENT_TOO_LARGE;
 		_phase = PHASE_ERROR;
 		return STATUS_FUNCTION_SHOULD_RETURN;
 	}
@@ -479,6 +643,45 @@ bool Utils::isValidMethod(string const &method)
 	return false;
 }
 
+namespace
+{
+	std::size_t parseSize(string const &size)
+	{
+		char *pEnd = NULL;
+		long num = std::strtol(size.c_str(), &pEnd, 10);
+		if (errno == ERANGE || num < 0)
+			return 0;
+
+		long mult = 0;
+		switch (std::toupper(*pEnd))
+		{
+			case 'B':
+				mult = 1l;
+				break;
+			case 'K':
+				mult = 1000l;
+				break;
+			case 'M':
+				mult = 1000l * 1000l;
+				break;
+			case 'G':
+				mult = 1000 * 1000l * 1000l;
+				break;
+			default:
+				mult = 0;
+				break;
+		}
+		if (mult == 0)
+			return 0;
+
+		unsigned long res = std::numeric_limits<unsigned long>::max() / static_cast<unsigned long>(mult);
+		if (static_cast<unsigned long>(num) > res)
+			return 0;
+
+		return static_cast<std::size_t>(num) * static_cast<std::size_t>(mult);
+	}
+}
+
 // -- debugging fuction --//
 void Request::printRequest()
 {
@@ -491,4 +694,9 @@ void Request::printStartLine()
 	std::cout<<"START LINE method : "<< _startLine.method <<std::endl;
 	std::cout<<"START LINE request Target: "<< _startLine.requestTarget<<std::endl;
 	std::cout<<"START LINE http version: "<< _startLine.httpVersion<<std::endl;
+}
+
+void Request::printBodyMessage()
+{
+	std::cout << "Body Message : [" << _body.data << ']' << std::endl;
 }

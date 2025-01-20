@@ -22,13 +22,15 @@ class Response
 	{
 		IO_ERROR,
 		IO_DISCONNECT,
+		O_NOT_READY,
+		O_INCOMPLETE,
 		IO_SUCCESS,
 	};
 
 	/* Methods */
 	Response();
 	Response(Response const &src);
-	Response(Request const &request, WebServer::Server const &config);
+	Response(Request const &request, Server const &config);
 	~Response();
 
 	Response &operator=(Response const &rhs);
@@ -46,10 +48,7 @@ class Response
 	bool isComplete() const;
 	void setEndCGI();
 	e_IOReturn retrieve();
-
-	std::string createResponseLine(Request const &request, std::string const & reason = "");
-	
-	std::string getDefaultHeaders(Request const &request,int size);
+	e_IOReturn sendData(int fd);
 
   protected:
 
@@ -62,33 +61,30 @@ class Response
 	std::string _cgiData;
 	int _cgiFd;
 	pid_t _cgiPid;
-	bool _cgiFinished;
-	bool _responseComplete;
 	ResponseLine _responseLine;
 	std::string _headers;
-	WebServer::Server _serverBlock;
+	Server _serverBlock;
 	std::string _locationKey;
-	WebServer::Location _locationBlock;
+	Location _locationBlock;
 	std::string _requestFile;
 	std::string _requestQuery;
 	std::string _absolutePath;
 	t_mapStrings _contentType;
 	
 	/* Methods */
-	bool handleCGI(Request const &request, std::string const &cgiExecutable);
+	std::string createResponseLine(Request const &request, std::string const & reason = "");
+	std::string getDefaultHeaders();
 	bool isError(Request const &request);
 	int isCGI() const;
 	std::string getFileContent(std::string const &pathname) const;
 	char **headersToEnv(t_mapStrings const &headers, t_mapStrings const &cgiHeaders) const;
-	std::string getLocationBlock(std::string const &requestTarget) const;
-	t_vecString getValueOfLocation(std::string const &target);
-	t_vecString getValueOfServer(std::string const &target);
 	void splitRequestTarget(std::string const &requestTarget);
 	void parseCGIResponse();
 	int setLocationBlock(Request const &request);
 	int setAbsolutePathname();
 	t_mapStrings createCGIHeaders(Request const &request);
-	t_vecString getValueOf(std::string const &target);
+	t_vecString getValuesOf(std::string const &target);
+	std::string getValueOf(std::string const &target);
 	void initContentType();
 	std::string getContentType(std::string const &file);
 };
