@@ -24,6 +24,7 @@ typedef vector<string> t_vecString;
 namespace
 {
 	std::size_t const MAX_BUFFER_LEN = 8192;
+	template<typename T> string numToString(T number);
 }
 
 namespace Utils
@@ -67,6 +68,11 @@ Response::Response(Request const &request, Server const &configs):
 	splitRequestTarget(request.getStartLine().requestTarget);
 	_locationKey = request.getLocationKey();
 	_locationBlock = _serverBlock._locations.at(_locationKey);
+	if (!getValuesOf("return").empty())
+	{
+		handleRedirection();
+		return;
+	}
 	if (setAbsolutePathname() != 0)
 	{
 		// TODO: set to error 404 not found in the response
@@ -517,6 +523,22 @@ string Response::getContentType(string const &file)
 	return _contentType[extension];
 }
 
+void Response::handleRedirection()
+{
+	t_vecStrings redirection = getValuesOf("return");
+	string startLine = createStartLine(std::atoi(redirection[0]));
+	string bodyMsg = "Redirecting";
+	string headers = getDefaultHeaders(bodyMsg.size());
+	headers += "Location: " + redirection[1] + "\r\n";
+	_buffer = startLine + "\r\n" + headers + "\r\n" + bodyMsg;
+}
+
+string Response::createStartLine(int statusCode, std::string const &reason)
+{
+	string startLine = "HTTP/1.1 " + numToString(statusCode) + ' ' + reason;
+	return startLine;
+}
+
 bool Utils::isDirectory(char const pathname[])
 {
 	struct stat s;
@@ -524,4 +546,14 @@ bool Utils::isDirectory(char const pathname[])
 		return false;
 
 	return !!(s.st_mode & S_IFDIR);
+}
+
+namespace
+{
+	template<typename T> string numToString(T number)
+	{
+		stringstream ss;
+		ss << number;
+		return number.str();
+	}
 }

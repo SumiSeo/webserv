@@ -90,6 +90,8 @@ class Response
 	std::string getValueOf(std::string const &target);
 	void initContentType();
 	std::string getContentType(std::string const &file);
+	void handleRedirection();
+	std::string createStartLine(int statusCode, std::string const &reason = "");
 };
 
 #endif
