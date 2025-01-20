@@ -76,7 +76,7 @@ class Response
 	t_mapStrings _contentType;
 	
 	/* Methods */
-	bool handleCGI(Request const &request, std::string const &cgiExecutable);
+	bool handleCGI(Request const &request);
 	bool isError(Request const &request);
 	int isCGI() const;
 	std::string getFileContent(std::string const &pathname) const;
