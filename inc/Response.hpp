@@ -49,7 +49,7 @@ class Response
 
 	std::string createResponseLine(Request const &request, std::string const & reason = "");
 	
-	std::string getDefaultHeaders(Request const &request);
+	std::string getDefaultHeaders(Request const &request,int size);
 
   protected:
 

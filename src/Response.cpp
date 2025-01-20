@@ -103,17 +103,20 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 	}
 	else
 	{
-		//if it is not cgi static response should be sent to client
+		string responseLine = createResponseLine(request);
+		string responseBody = getFileContent(_absolutePath);
+		int responseBodySize = responseBody.size();
+		string responseHeaders = responseLine.append(getDefaultHeaders(request,responseBodySize));
+		std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
+		std::cout << "HEADERS " << responseHeaders <<std::endl; 
+		string responseHeadersLine = responseHeaders + "\r\n";
+		string _buffer = responseHeadersLine.append(responseBody);
+		std::cout << "fd check" << request.getFd()<<std::endl;
+		std::cout<<"buffer :" << _buffer <<std::endl;
+		int fd = request.getFd();
+		send(fd, _buffer.c_str(), _buffer.size(), 0);
 	}
-	string responseLine = createResponseLine(request);
-	string responseHeaders = responseLine.append(getDefaultHeaders(request));
-	std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
-	string responseBody = getFileContent(_absolutePath);
-	string _buffer = responseHeaders.append(responseBody);
-	std::cout << "fd check" << request.getFd()<<std::endl;
-	std::cout<<"buffer :" << _buffer <<std::endl;
-	int fd = request.getFd();
-	send(fd, _buffer.c_str(), _buffer.size(), 0);
+	
 }	
 
 Response::~Response()
@@ -188,7 +191,7 @@ std::string Response::createResponseLine(Request const &request, std::string con
 	return responseLine;
 }
 
-std::string Response::getDefaultHeaders(Request const &request)
+std::string Response::getDefaultHeaders(Request const &request, int size)
 {
 	time_t now;
 	time(&now);
@@ -200,7 +203,10 @@ std::string Response::getDefaultHeaders(Request const &request)
 	std::string contentType = getContentType("index.html");
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
-	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
+	stringstream convertedSize;
+	convertedSize << size;
+	string finalSize = convertedSize.str();
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" +"Content-length: " + finalSize + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
 	return url;
 }
 
