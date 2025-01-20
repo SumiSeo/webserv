@@ -55,7 +55,7 @@ class Response
   private:
 	/* Typedefs*/
 	typedef std::map<std::string, std::string> t_mapStrings;
-	typedef std::vector<std::string> t_vecString;
+	typedef std::vector<std::string> t_vecStrings;
 	/* Members */
 	std::string _buffer;
 	std::string _cgiData;
@@ -84,10 +84,12 @@ class Response
 	int setLocationBlock(Request const &request);
 	int setAbsolutePathname();
 	t_mapStrings createCGIHeaders(Request const &request);
-	t_vecString getValuesOf(std::string const &target);
+	t_vecStrings getValuesOf(std::string const &target);
 	std::string getValueOf(std::string const &target);
 	void initContentType();
 	std::string getContentType(std::string const &file);
+	void handleRedirection();
+	std::string createStartLine(int statusCode, std::string const &reason = "");
 };
 
 #endif
