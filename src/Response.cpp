@@ -1,6 +1,8 @@
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
+#include <limits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -14,6 +16,7 @@
 #define CHILD_END 1
 
 using std::ifstream;
+using std::ofstream;
 using std::map;
 using std::string;
 using std::stringstream;
@@ -119,22 +122,40 @@ Response::Response(Request const &request, Server const &configs):
 	}
 	else
 	{
-		//if it is get 
-		string responseLine = createResponseLine(request);
-		string responseBody = getFileContent(_absolutePath);
-		int responseBodySize = responseBody.size();
-		string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
-		std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
-		string responseHeadersLine = responseHeaders + "\r\n";
-		_buffer = responseHeadersLine.append(responseBody);
-
-		//it ts is POST check and then if it is upload 
-		// I have to display bad request // 
-
-
-		// DELETE
-		// remove the file that we created 
-		// unlink in C 
+		string const &method = request.getStartLine().method;
+		if (method == "GET")
+		{
+			string responseLine = createResponseLine(request);
+			string responseBody = getFileContent(_absolutePath);
+			int responseBodySize = responseBody.size();
+			string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
+			std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
+			std::cout << "HEADERS " << responseHeaders <<std::endl; 
+			string responseHeadersLine = responseHeaders + "\r\n";
+			_buffer = responseHeadersLine.append(responseBody);
+			std::cout << "fd check" << request.getFd()<<std::endl;
+			std::cout<<"buffer :" << _buffer <<std::endl;
+		}
+		else if (method == "POST")
+		{
+			if (!_locationBlock.getValueOf("upload_path").empty())
+				handleUpload(request);
+			else
+			{
+				// TODO: create response 405 Not Allowed
+				//it ts is POST check and then if it is upload 
+				// I have to display bad request // 
+			}
+		}
+		else if (method == "DELETE")
+		{
+			if (!_locationBlock.getValueOf("upload_path").empty())
+				handleDelete(request);
+			else
+			{
+				// TODO: create response 405 Not Allowed
+			}
+		}
 	}
 }
 
@@ -566,6 +587,60 @@ string Response::createStartLine(int statusCode, std::string const &reason)
 {
 	string startLine = "HTTP/1.1 " + numToString(statusCode) + ' ' + reason;
 	return startLine;
+}
+
+void Response::handleUpload(Request const &request)
+{
+	string path = _locationBlock.getValueOf("upload_path");
+	string fileName = "tmpfile";
+	unsigned long num = 0;
+	bool newFile = false;
+	for (; num < std::numeric_limits<unsigned long>::max(); ++num)
+	{
+		string pathName = path + fileName + numToString(num);
+		if (access(pathName.c_str(), F_OK) != 0)
+		{
+			newFile = true;
+			break;
+		}
+	}
+	if (newFile)
+	{
+		try
+		{
+			fileName += numToString(num);
+			string pathName = path + fileName;
+			ofstream fileOutput(pathName.c_str());
+			fileOutput << request.getBody();
+			string startLine = createStartLine(201, "Created");
+			string headers = getDefaultHeaders(0);
+			headers += "Location: " + _locationKey + fileName + "\r\n";
+			_buffer = startLine + "\r\n" + headers + "\r\n";
+			return;
+		}
+		catch (std::ios_base::failure const &f)
+		{
+			std::cerr << "handleUpload Error : " << f.what() << std::endl;
+		}
+	}
+	string startLine = createStartLine(500, "Internal Server Error");
+	string bodyMsg = "Internal Server Error";
+	string headers = getDefaultHeaders(bodyMsg.size());
+
+	_buffer = startLine + "\r\n" + headers + "\r\n" + bodyMsg;
+}
+
+void Response::handleDelete(Request const &request)
+{
+	string path = _locationBlock.getValueOf("upload_path");
+	string fileName = request.getStartLine().requestTarget.substr(_locationKey.size() - 1);
+	string pathName = path + fileName;
+	string startLine;
+	if (unlink(pathName.c_str()) == -1)
+		std::perror("unlink");
+	startLine = createStartLine(202, "Accepted");
+	string headers = getDefaultHeaders(0);
+	_buffer = startLine + "\r\n" + headers + "\r\n";
 }
 
 bool Utils::isDirectory(char const pathname[])
