@@ -119,22 +119,45 @@ Response::Response(Request const &request, Server const &configs):
 	}
 	else
 	{
-		//if it is get 
-		string responseLine = createResponseLine(request);
-		string responseBody = getFileContent(_absolutePath);
-		int responseBodySize = responseBody.size();
-		string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
-		std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
-		string responseHeadersLine = responseHeaders + "\r\n";
-		_buffer = responseHeadersLine.append(responseBody);
-
-		//it ts is POST check and then if it is upload 
-		// I have to display bad request // 
-
-
-		// DELETE
-		// remove the file that we created 
-		// unlink in C 
+		string const &method = request.getStartLine().method;
+		if (method == "GET")
+		{
+			string responseLine = createResponseLine(request);
+			string responseBody = getFileContent(_absolutePath);
+			int responseBodySize = responseBody.size();
+			string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
+			std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
+			std::cout << "HEADERS " << responseHeaders <<std::endl; 
+			string responseHeadersLine = responseHeaders + "\r\n";
+			_buffer = responseHeadersLine.append(responseBody);
+			std::cout << "fd check" << request.getFd()<<std::endl;
+			std::cout<<"buffer :" << _buffer <<std::endl;
+		}
+		else if (method == "POST")
+		{
+			if (!_locationBlock.getValueOf("upload_path").empty())
+				handleUpload();
+			else
+			{
+				// TODO: create response 405 Not Allowed
+				//it ts is POST check and then if it is upload 
+				// I have to display bad request // 
+			}
+		}
+		else if (method == "DELETE")
+		{
+			if (!_locationBlock.getValueOf("upload_path").empty())
+			{
+				// TODO: Handle remove
+				// DELETE
+				// remove the file that we created 
+				// unlink in C 
+			}
+			else
+			{
+				// TODO: create response 405 Not Allowed
+			}
+		}
 	}
 }
 
@@ -566,6 +589,16 @@ string Response::createStartLine(int statusCode, std::string const &reason)
 {
 	string startLine = "HTTP/1.1 " + numToString(statusCode) + ' ' + reason;
 	return startLine;
+}
+
+void Response::handleUpload()
+{
+	string path = _locationBlock.getValueOf("upload_path");
+	string fileName = "tmpfile";
+	std::size_t num = 0;
+	while (true)
+	{
+	}
 }
 
 bool Utils::isDirectory(char const pathname[])
