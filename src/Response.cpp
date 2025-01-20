@@ -19,7 +19,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-typedef vector<string> t_vecString;
+typedef vector<string> t_vecStrings;
 
 namespace
 {
@@ -31,8 +31,8 @@ namespace Utils
 {
 	bool isDirectory(char const pathname[]);
 	string trimString(string const &input, string const &charset);
-	string getListenAddress(t_vecString const &listenValue);
-	string getListenPort(t_vecString const &listenValue);
+	string getListenAddress(t_vecStrings const &listenValue);
+	string getListenPort(t_vecStrings const &listenValue);
 }
 
 // --- Public Methods --- //
@@ -323,7 +323,7 @@ bool Response::isError(Request const &request)
 
 int Response::isCGI() const
 {
-	typedef map<string, t_vecString> t_mapStringVecString;
+	typedef map<string, t_vecStrings> t_mapStringVecString;
 	t_mapStringVecString::const_iterator cgi = _locationBlock._pairs.find("cgi");
 	return cgi != _locationBlock._pairs.end() && cgi->second.size() != 0;
 }
@@ -454,7 +454,7 @@ Response::t_mapStrings Response::createCGIHeaders(Request const &request)
 	cgiHeaders["SERVER_SOFTWARE"] = "ft_webserv/1.0";
 	string listenAddress = "127.0.0.1";
 	string listenPort = "8080";
-	t_vecString listenValue = _serverBlock.getValuesOf("listen");
+	t_vecStrings listenValue = _serverBlock.getValuesOf("listen");
 	if (listenValue.size() != 0)
 	{
 		listenAddress = Utils::getListenAddress(listenValue);
@@ -468,9 +468,9 @@ Response::t_mapStrings Response::createCGIHeaders(Request const &request)
 	return cgiHeaders;
 }
 
-Response::t_vecString Response::getValuesOf(string const &target)
+Response::t_vecStrings Response::getValuesOf(string const &target)
 {
-	t_vecString values = _locationBlock.getValuesOf(target);
+	t_vecStrings values = _locationBlock.getValuesOf(target);
 	if (values.empty())
 		values = _serverBlock.getValuesOf(target);
 	return values;
@@ -526,7 +526,7 @@ string Response::getContentType(string const &file)
 void Response::handleRedirection()
 {
 	t_vecStrings redirection = getValuesOf("return");
-	string startLine = createStartLine(std::atoi(redirection[0]));
+	string startLine = createStartLine(std::atoi(redirection[0].c_str()));
 	string bodyMsg = "Redirecting";
 	string headers = getDefaultHeaders(bodyMsg.size());
 	headers += "Location: " + redirection[1] + "\r\n";
