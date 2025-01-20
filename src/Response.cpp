@@ -28,7 +28,6 @@ namespace
 
 namespace Utils
 {
-	std::size_t lenLongestPrefix(char const str1[], char const str2[]);
 	bool isDirectory(char const pathname[]);
 	string trimString(string const &input, string const &charset);
 	string getListenAddress(t_vecString const &listenValue);
@@ -56,7 +55,7 @@ Response::Response(Response const &src):
 {
 }
 
-Response::Response(Request const &request, WebServer::Server const &configs):
+Response::Response(Request const &request, Server const &configs):
 	_cgiFd(-1),
 	_serverBlock(configs)
 {
@@ -66,18 +65,20 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 		std::cout<<"THERE IS ERROR"<<std::endl;
 	}
 	splitRequestTarget(request.getStartLine().requestTarget);
-	if (setLocationBlock(request) != 0 || setAbsolutePathname() != 0)
+	_locationKey = request.getLocationKey();
+	_locationBlock = _serverBlock._locations.at(_locationKey);
+	if (setAbsolutePathname() != 0)
 	{
 		// TODO: set to error 404 not found in the response
 		return;
 	}
 	if (Utils::isDirectory(_absolutePath.c_str()))
 	{
-		t_vecString index = getValueOf("index");
+		string index = getValueOf("index");
 		if (index.empty())
 		{
-			t_vecString autoIndex = getValueOf("autoindex");
-			if (autoIndex.empty() || autoIndex.at(0) == "off")
+			string autoIndex = getValueOf("autoindex");
+			if (autoIndex.empty() || autoIndex == "off")
 			{
 				// TODO: set an error in the response 
 				return;
@@ -85,12 +86,12 @@ Response::Response(Request const &request, WebServer::Server const &configs):
 			// TODO: create a response that list all files in the directory
 			return;
 		}
-		_absolutePath += index.at(0);
+		_absolutePath += index;
 	}
 
 	if(isCGI())
 	{
-		if (!handleCGI(request, getValueOfLocation("cgi")[0]))
+		if (!handleCGI(request, _locationBlock.getValueOf("cgi")))
 		{
 			// TODO: set internal error in the response
 		}
@@ -376,53 +377,6 @@ char **Response::headersToEnv(t_mapStrings const &headers, t_mapStrings const &c
 	return envp;
 }
 
-string Response::getLocationBlock(std::string const &requestTarget) const
-{
-	typedef map<string, WebServer::Location> t_mapStringLoc;
-
-	t_mapStringLoc::const_iterator locationBlock;
-	std::size_t lenMax = 0;
-
-	for (t_mapStringLoc::const_iterator it = _serverBlock._locations.begin(); it != _serverBlock._locations.end(); ++it)
-	{
-		string const &locationValue = it->first;
-		std::size_t lenPrefix = 0;
-		if (locationValue.at(locationValue.size() - 1) == '/')
-			lenPrefix = Utils::lenLongestPrefix(locationValue.c_str(), requestTarget.c_str());
-		else if (std::strcmp(locationValue.c_str(), requestTarget.c_str()) == 0)
-			return locationValue;
-		if (lenPrefix > lenMax)
-		{
-			locationBlock = it;
-			lenMax = lenPrefix;
-		}
-	}
-
-	if (lenMax != 0)
-		return locationBlock->first;
-	return string("");
-}
-
-Response::t_vecString Response::getValueOfLocation(string const &target)
-{
-	typedef map<string, t_vecString> t_mapStringVecString;
-
-	t_mapStringVecString::const_iterator keyValues = _locationBlock._pairs.find(target);
-	if (keyValues == _locationBlock._pairs.end())
-		return t_vecString();
-	return keyValues->second;
-}
-
-Response::t_vecString Response::getValueOfServer(string const &target)
-{
-	typedef map<string, t_vecString> t_mapStringVecString;
-
-	t_mapStringVecString::const_iterator keyValues = _serverBlock._configs.find(target);
-	if (keyValues == _serverBlock._configs.end())
-		return t_vecString();
-	return keyValues->second;
-}
-
 void Response::splitRequestTarget(string const &requestTarget)
 {
 	std::size_t pos = requestTarget.find("?");
@@ -472,21 +426,12 @@ void Response::parseCGIResponse()
 	string().swap(_cgiData);
 }
 
-int Response::setLocationBlock(Request const &request)
-{
-	_locationKey = getLocationBlock(request.getStartLine().requestTarget);
-	if (_locationKey.empty())
-		return 1;
-	_locationBlock = _serverBlock._locations.at(_locationKey);
-	return 0;
-}
-
 int Response::setAbsolutePathname()
 {
-	t_vecString root = getValueOf("root");
+	string root = getValueOf("root");
 	if (root.empty())
 		return 1;
-	_absolutePath += root.at(0) + _requestFile.substr(_locationKey.size());
+	_absolutePath += root + _requestFile.substr(_locationKey.size());
 	return 0;
 }
 
@@ -503,7 +448,7 @@ Response::t_mapStrings Response::createCGIHeaders(Request const &request)
 	cgiHeaders["SERVER_SOFTWARE"] = "ft_webserv/1.0";
 	string listenAddress = "127.0.0.1";
 	string listenPort = "8080";
-	t_vecString listenValue = getValueOfServer("listen");
+	t_vecString listenValue = _serverBlock.getValuesOf("listen");
 	if (listenValue.size() != 0)
 	{
 		listenAddress = Utils::getListenAddress(listenValue);
@@ -512,15 +457,25 @@ Response::t_mapStrings Response::createCGIHeaders(Request const &request)
 	cgiHeaders["SERVER_NAME"] = listenAddress;
 	cgiHeaders["SERVER_PORT"] = listenPort;
 	cgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1";
+	cgiHeaders["REMOTE_ADDR"] = request.getAddress();
+	cgiHeaders["SERVER_PORT"] = listenPort;
 	return cgiHeaders;
 }
 
-Response::t_vecString Response::getValueOf(string const &target)
+Response::t_vecString Response::getValuesOf(string const &target)
 {
-	t_vecString values = getValueOfLocation(target);
+	t_vecString values = _locationBlock.getValuesOf(target);
 	if (values.empty())
-		values = getValueOfServer(target);
+		values = _serverBlock.getValuesOf(target);
 	return values;
+}
+
+string Response::getValueOf(string const &target)
+{
+	string value = _locationBlock.getValueOf(target);
+	if (value.empty())
+		value = _serverBlock.getValueOf(target);
+	return value;
 }
 
 void Response::initContentType()
@@ -560,18 +515,6 @@ string Response::getContentType(string const &file)
 	if (_contentType.find(extension) == _contentType.end())
 		return "application/octet-stream";
 	return _contentType[extension];
-}
-
-std::size_t Utils::lenLongestPrefix(char const str1[], char const str2[])
-{
-	std::size_t i = 0;
-	while (str1[i] != '\0' && str2[i] != '\0')
-	{
-		if (str1[i] != str2[i])
-			break;
-		++i;
-	}
-	return i;
 }
 
 bool Utils::isDirectory(char const pathname[])

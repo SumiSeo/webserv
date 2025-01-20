@@ -1,12 +1,12 @@
-#ifndef __SERVER_HPP__
-# define __SERVER_HPP__
+#ifndef __WEBSERVER_HPP__
+# define __WEBSERVER_HPP__
 
 # include <map>
 # include <set>
 # include <string>
 # include <vector>
 
-# include "Request.hpp"
+# include "Server.hpp"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -27,26 +27,18 @@ class Response;
 #define BUF_SIZE 500
 #define MAX_CLIENTS 10
 
+class Request;
+
 class WebServer
 {
   public:
+	/* Typedefs */
+	typedef std::vector<std::string> t_vecStrings;
+
 	/* Methods */
 	WebServer(char const fileName[]);
 	~WebServer();
 
-	// Typedefs
-	typedef std::vector<std::string> t_vecString;
-
-	/* New Variable Types */
-	struct	Location
-	{
-		std::map<std::string, t_vecString> _pairs;
-	};
-	struct Server
-	{
-		std::map<std::string, t_vecString> _configs;
-		std::map<std::string, Location> _locations;
-	};
 	void loop();
 
   protected:
@@ -67,19 +59,21 @@ class WebServer
 	WebServer &operator=(WebServer const &original);
 
 	// -- Main functions -- //
-	t_vecString readFile(char const fileName[]);
-	void searchTokens(t_vecString const &tokens);
+	t_vecStrings readFile(char const fileName[]);
+	void searchTokens(t_vecStrings const &tokens);
+	bool isValidConfig() const;
 
 	// -- Utils functions -- //
-	void parseTokens(t_vecString::const_iterator start,
-		t_vecString::const_iterator end);
-	void tokenToMap(t_vecString::const_iterator start,
-		t_vecString::const_iterator end);
-	void LocationToMap(t_vecString::const_iterator start,
-		t_vecString::const_iterator end);
+	void parseTokens(t_vecStrings::const_iterator start,
+		t_vecStrings::const_iterator end);
+	void tokenToMap(t_vecStrings::const_iterator start,
+		t_vecStrings::const_iterator end);
+	void LocationToMap(t_vecStrings::const_iterator start,
+		t_vecStrings::const_iterator end);
 	static void *get_in_addr(struct sockaddr *sa);
 	int createServer();
 	bool handleCGIInput(int fd);
+	bool isValidValue(std::string const &key, t_vecStrings const &values) const;
 
 	// -- debugging functions -- //
 	void printKeyValues();
