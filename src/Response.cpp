@@ -75,14 +75,8 @@ Response::Response(Request const &request, Server const &configs):
 		handleRedirection();
 		return;
 	}
-	if (setAbsolutePathname() != 0)
-	{
-		// Sumi -> sending correct error message and display 404 page
-		// Also I have to add all status code
-
-		// TODO: set to error 404 not found in the response
-		return;
-	}
+	setAbsolutePathname();
+	std::cout <<" @@@PATH CHECK " << _absolutePath << std::endl;
 	if (Utils::isDirectory(_absolutePath.c_str()))
 	{
 		string index = getValueOf("index");
@@ -91,24 +85,29 @@ Response::Response(Request const &request, Server const &configs):
 			string autoIndex = getValueOf("autoindex");
 			if (autoIndex.empty() || autoIndex == "off")
 			{
-				// TODO: set an error in the response 
-				// if it is directory, send bad/request 
-				// and display error messgae
+				string responseLine = createResponseLine(request);
+				_absolutePath = "/tmp/web/www/errors/";
+				string responseBody = getFileContent(_absolutePath+ "404.html");
+				int responseBodySize = responseBody.size();
+				string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
+				string responseHeadersLine = responseHeaders + "\r\n";
+				_buffer = responseHeadersLine.append(responseBody);
+
 				return;
 			}
-			// TODO: create a response that list all files in the directory
-			// If autoindex is on 
-			// I have to list all the files
-			//lists,
-			//index.html
-			
-
+			else
+			{
+				string responseLine = createResponseLine(request);
+				string responseBody = getFileContent(_absolutePath + "index.html");
+				int responseBodySize = responseBody.size();
+				string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
+				string responseHeadersLine = responseHeaders + "\r\n";
+				_buffer = responseHeadersLine.append(responseBody);
+			}
 			return;
 		}
 		_absolutePath += index;
 	}
-		std::cout <<" @@@PATH CHECK " << _absolutePath << std::endl;
-
 	if(isCGI())
 	{
 		if (!handleCGI(request))
@@ -119,22 +118,14 @@ Response::Response(Request const &request, Server const &configs):
 	}
 	else
 	{
-		//if it is get 
 		string responseLine = createResponseLine(request);
 		string responseBody = getFileContent(_absolutePath);
 		int responseBodySize = responseBody.size();
 		string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
-		std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
+		std::cout << "ABSOLUTE PATH "  << _absolutePath<< std::endl;
 		string responseHeadersLine = responseHeaders + "\r\n";
 		_buffer = responseHeadersLine.append(responseBody);
-
-		//it ts is POST check and then if it is upload 
-		// I have to display bad request // 
-
-
-		// DELETE
-		// remove the file that we created 
-		// unlink in C 
+		std::cout <<" BUFFER : " << _buffer<<std::endl;
 	}
 }
 
@@ -464,7 +455,7 @@ int Response::setAbsolutePathname()
 	string root = getValueOf("root");
 	if (root.empty())
 		return 1;
-	_absolutePath += root + _requestFile.substr(_locationKey.size());
+	_absolutePath += root + _requestFile.substr(_locationKey.size() - 1);
 	if (_absolutePath[_absolutePath.size() - 1] == '/')
 		_absolutePath += getValueOf("index");
 	return 0;
