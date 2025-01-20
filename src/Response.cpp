@@ -69,6 +69,9 @@ Response::Response(Request const &request, Server const &configs):
 	_locationBlock = _serverBlock._locations.at(_locationKey);
 	if (setAbsolutePathname() != 0)
 	{
+		// Sumi -> sending correct error message and display 404 page
+		// Also I have to add all status code
+
 		// TODO: set to error 404 not found in the response
 		return;
 	}
@@ -81,9 +84,17 @@ Response::Response(Request const &request, Server const &configs):
 			if (autoIndex.empty() || autoIndex == "off")
 			{
 				// TODO: set an error in the response 
+				// if it is directory, send bad/request 
+				// and display error messgae
 				return;
 			}
 			// TODO: create a response that list all files in the directory
+			// If autoindex is on 
+			// I have to list all the files
+			//lists,
+			//index.html
+			
+
 			return;
 		}
 		_absolutePath += index;
@@ -93,11 +104,13 @@ Response::Response(Request const &request, Server const &configs):
 	{
 		if (!handleCGI(request))
 		{
+			// Pascal control if CGI fails
 			// TODO: set internal error in the response
 		}
 	}
 	else
 	{
+		//if it is get 
 		string responseLine = createResponseLine(request);
 		string responseBody = getFileContent(_absolutePath);
 		int responseBodySize = responseBody.size();
@@ -108,6 +121,14 @@ Response::Response(Request const &request, Server const &configs):
 		_buffer = responseHeadersLine.append(responseBody);
 		std::cout << "fd check" << request.getFd()<<std::endl;
 		std::cout<<"buffer :" << _buffer <<std::endl;
+
+		//it ts is POST check and then if it is upload 
+		// I have to display bad request // 
+
+
+		// DELETE
+		// remove the file that we created 
+		// unlink in C 
 	}
 }
 
