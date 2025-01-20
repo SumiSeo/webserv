@@ -101,17 +101,15 @@ Response::Response(Request const &request, Server const &configs):
 		string responseLine = createResponseLine(request);
 		string responseBody = getFileContent(_absolutePath);
 		int responseBodySize = responseBody.size();
-		string responseHeaders = responseLine.append(getDefaultHeaders(request,responseBodySize));
+		string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
 		std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
 		std::cout << "HEADERS " << responseHeaders <<std::endl; 
 		string responseHeadersLine = responseHeaders + "\r\n";
-		string _buffer = responseHeadersLine.append(responseBody);
+		_buffer = responseHeadersLine.append(responseBody);
 		std::cout << "fd check" << request.getFd()<<std::endl;
 		std::cout<<"buffer :" << _buffer <<std::endl;
-		int fd = request.getFd();
-		send(fd, _buffer.c_str(), _buffer.size(), 0);
 	}
-}	
+}
 
 Response::~Response()
 {
@@ -204,7 +202,7 @@ std::string Response::createResponseLine(Request const &request, std::string con
 	return responseLine;
 }
 
-std::string Response::getDefaultHeaders(Request const &, int size)
+std::string Response::getDefaultHeaders(std::size_t size)
 {
 	time_t now;
 	time(&now);
@@ -219,7 +217,7 @@ std::string Response::getDefaultHeaders(Request const &, int size)
 	stringstream convertedSize;
 	convertedSize << size;
 	string finalSize = convertedSize.str();
-	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" +"Content-length: " + finalSize + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" +"Content-length: " + finalSize + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
 	return url;
 }
 
@@ -434,14 +432,9 @@ void Response::parseCGIResponse()
 	}
 	else
 		_buffer = "HTTP/1.1 200 OK\r\n";
-	_buffer += getDefaultHeaders() + "\r\n";
+	_buffer += getDefaultHeaders(_cgiData.size()) + "\r\n";
 	for (t_mapStrings::const_iterator it = cgiHeaders.begin(); it != cgiHeaders.end(); ++it)
 		_buffer += it->first + ": " + it->second + "\r\n";
-	{
-		stringstream ss;
-		ss << _cgiData.size();
-		_buffer += "Content-Length: " + ss.str() + "\r\n";
-	}
 	_buffer += "\r\n" + _cgiData;
 	string().swap(_cgiData);
 }
@@ -452,6 +445,8 @@ int Response::setAbsolutePathname()
 	if (root.empty())
 		return 1;
 	_absolutePath += root + _requestFile.substr(_locationKey.size());
+	if (_absolutePath[_absolutePath.size() - 1] == '/')
+		_absolutePath += getValueOf("index");
 	return 0;
 }
 

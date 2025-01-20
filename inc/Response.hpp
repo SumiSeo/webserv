@@ -73,12 +73,13 @@ class Response
 	
 	/* Methods */
 	std::string createResponseLine(Request const &request, std::string const & reason = "");
-	std::string getDefaultHeaders();
+	std::string getDefaultHeaders(std::size_t size);
 	bool isError(Request const &request);
 	int isCGI() const;
 	std::string getFileContent(std::string const &pathname) const;
 	char **headersToEnv(t_mapStrings const &headers, t_mapStrings const &cgiHeaders) const;
 	void splitRequestTarget(std::string const &requestTarget);
+	bool handleCGI(Request const &request);
 	void parseCGIResponse();
 	int setLocationBlock(Request const &request);
 	int setAbsolutePathname();
