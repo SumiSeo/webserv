@@ -440,6 +440,8 @@ Response::t_mapStrings Response::createCGIHeaders(Request const &request)
 	cgiHeaders["SERVER_NAME"] = listenAddress;
 	cgiHeaders["SERVER_PORT"] = listenPort;
 	cgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1";
+	cgiHeaders["REMOTE_ADDR"] = request.getAddress();
+	cgiHeaders["SERVER_PORT"] = listenPort;
 	return cgiHeaders;
 }
 

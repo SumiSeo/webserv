@@ -1,3 +1,5 @@
+#include <fcntl.h>
+
 #include <algorithm>
 #include <cerrno>
 #include <cstdio>
@@ -6,7 +8,6 @@
 #include <iostream>
 #include <map>
 #include <sstream>
-
 
 #include "WebServer.hpp"
 #include "Request.hpp"
@@ -405,6 +406,12 @@ void WebServer::loop()
 						std::perror("accept");
 						continue;
 					}
+					if (fcntl(clientFd, F_SETFD, FD_CLOEXEC) == -1)
+					{
+						std::perror("fcntl");
+						close(clientFd);
+						continue;
+					}
 					std::memset(&event, 0, sizeof(event));
 					event.events = EPOLLIN | EPOLLOUT;
 					event.data.fd = clientFd;
@@ -537,6 +544,12 @@ int WebServer::createServer()
 		if(listen(socketFd, 10) == -1)
 		{
 			std::perror("listen");
+			close(socketFd);
+			continue;
+		}
+		if (fcntl(socketFd, F_SETFD, FD_CLOEXEC) == -1)
+		{
+			std::perror("fcntl");
 			close(socketFd);
 			continue;
 		}
