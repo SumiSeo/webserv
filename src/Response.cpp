@@ -150,12 +150,7 @@ Response::Response(Request const &request, Server const &configs):
 		else if (method == "DELETE")
 		{
 			if (!_locationBlock.getValueOf("upload_path").empty())
-			{
-				// TODO: Handle remove
-				// DELETE
-				// remove the file that we created 
-				// unlink in C 
-			}
+				handleDelete(request);
 			else
 			{
 				// TODO: create response 405 Not Allowed
@@ -618,10 +613,9 @@ void Response::handleUpload(Request const &request)
 			ofstream fileOutput(pathName.c_str());
 			fileOutput << request.getBody();
 			string startLine = createStartLine(201, "Created");
-			string bodyMsg = "Created";
-			string headers = getDefaultHeaders(bodyMsg.size());
+			string headers = getDefaultHeaders(0);
 			headers += "Location: " + _locationKey + fileName + "\r\n";
-			_buffer = startLine + "\r\n" + headers + "\r\n" + bodyMsg;
+			_buffer = startLine + "\r\n" + headers + "\r\n";
 			return;
 		}
 		catch (std::ios_base::failure const &f)
@@ -634,6 +628,19 @@ void Response::handleUpload(Request const &request)
 	string headers = getDefaultHeaders(bodyMsg.size());
 
 	_buffer = startLine + "\r\n" + headers + "\r\n" + bodyMsg;
+}
+
+void Response::handleDelete(Request const &request)
+{
+	string path = _locationBlock.getValueOf("upload_path");
+	string fileName = request.getStartLine().requestTarget.substr(_locationKey.size() - 1);
+	string pathName = path + fileName;
+	string startLine;
+	if (unlink(pathName.c_str()) == -1)
+		std::perror("unlink");
+	startLine = createStartLine(202, "Accepted");
+	string headers = getDefaultHeaders(0);
+	_buffer = startLine + "\r\n" + headers + "\r\n";
 }
 
 bool Utils::isDirectory(char const pathname[])

@@ -246,6 +246,7 @@ void Request::parseHeader()
 		if (end == 0)
 		{
 			_buffer.erase(0, std::strlen(HTTP_DELIMITER));
+			_phase = PHASE_HEADERS;
 			break;
 		}
 		if (end == std::string::npos)
@@ -259,7 +260,6 @@ void Request::parseHeader()
 	/* Debugging: These line belows will be deleted in the end */
 	printStartLine();
 	printRequest();
-	_phase = PHASE_HEADERS;
 }
 
 void Request::parseStartLine()
