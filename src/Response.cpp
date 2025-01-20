@@ -62,12 +62,12 @@ Response::Response(Request const &request, Server const &configs):
 	initContentType();
 	if(isError(request))
 	{
-		std::cout<<"THERE IS ERROR"<<std::endl;
+		std::cout<<"THERE IS ERROR WITH STATUS CODE"<<std::endl;
+		return;
 	}
 	splitRequestTarget(request.getStartLine().requestTarget);
 	_locationKey = request.getLocationKey();
 	_locationBlock = _serverBlock._locations.at(_locationKey);
-	std::cout <<" @@@PATH CHECK " << _absolutePath << std::endl;
 	if (Utils::isDirectory(_absolutePath.c_str()))
 	{
 		string index = getValueOf("index");
@@ -92,6 +92,7 @@ Response::Response(Request const &request, Server const &configs):
 		}
 		_absolutePath += index;
 	}
+		std::cout <<" @@@PATH CHECK " << _absolutePath << std::endl;
 
 	if(isCGI())
 	{
@@ -324,17 +325,10 @@ endCGI:
 
 bool Response::isError(Request const &request)
 {
-	if(request.getPhase() == Request::PHASE_ERROR)
-	{
-		std::cout<<"Phase error"<< request.getPhase()<<std::endl;
-		return true;
-	}
-	if(request.getStatusCode()!= OK && request.getStatusCode() >1 )
-	{
-	   std::cout<<"status code error"<<request.getStatusCode()<<std::endl;
-	   return true;
-	}
-	return false;
+	std::cout << "status code : " << request.getStatusCode()<<std::endl;
+	if(request.getStatusCode() == OK || request.getStatusCode() == ACCEPTED || request.getStatusCode() == CREATED )
+	   return false;
+	return true;
 }
 
 int Response::isCGI() const
