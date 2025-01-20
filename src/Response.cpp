@@ -19,19 +19,20 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-typedef vector<string> t_vecString;
+typedef vector<string> t_vecStrings;
 
 namespace
 {
 	std::size_t const MAX_BUFFER_LEN = 8192;
+	template<typename T> string numToString(T number);
 }
 
 namespace Utils
 {
 	bool isDirectory(char const pathname[]);
 	string trimString(string const &input, string const &charset);
-	string getListenAddress(t_vecString const &listenValue);
-	string getListenPort(t_vecString const &listenValue);
+	string getListenAddress(t_vecStrings const &listenValue);
+	string getListenPort(t_vecStrings const &listenValue);
 }
 
 // --- Public Methods --- //
@@ -68,6 +69,20 @@ Response::Response(Request const &request, Server const &configs):
 	splitRequestTarget(request.getStartLine().requestTarget);
 	_locationKey = request.getLocationKey();
 	_locationBlock = _serverBlock._locations.at(_locationKey);
+
+	if (!getValuesOf("return").empty())
+	{
+		handleRedirection();
+		return;
+	}
+	if (setAbsolutePathname() != 0)
+	{
+		// Sumi -> sending correct error message and display 404 page
+		// Also I have to add all status code
+
+		// TODO: set to error 404 not found in the response
+		return;
+	}
 	if (Utils::isDirectory(_absolutePath.c_str()))
 	{
 		string index = getValueOf("index");
@@ -468,7 +483,7 @@ Response::t_mapStrings Response::createCGIHeaders(Request const &request)
 	cgiHeaders["SERVER_SOFTWARE"] = "ft_webserv/1.0";
 	string listenAddress = "127.0.0.1";
 	string listenPort = "8080";
-	t_vecString listenValue = _serverBlock.getValuesOf("listen");
+	t_vecStrings listenValue = _serverBlock.getValuesOf("listen");
 	if (listenValue.size() != 0)
 	{
 		listenAddress = Utils::getListenAddress(listenValue);
@@ -482,9 +497,9 @@ Response::t_mapStrings Response::createCGIHeaders(Request const &request)
 	return cgiHeaders;
 }
 
-Response::t_vecString Response::getValuesOf(string const &target)
+Response::t_vecStrings Response::getValuesOf(string const &target)
 {
-	t_vecString values = _locationBlock.getValuesOf(target);
+	t_vecStrings values = _locationBlock.getValuesOf(target);
 	if (values.empty())
 		values = _serverBlock.getValuesOf(target);
 	return values;
@@ -537,6 +552,22 @@ string Response::getContentType(string const &file)
 	return _contentType[extension];
 }
 
+void Response::handleRedirection()
+{
+	t_vecStrings redirection = getValuesOf("return");
+	string startLine = createStartLine(std::atoi(redirection[0].c_str()));
+	string bodyMsg = "Redirecting";
+	string headers = getDefaultHeaders(bodyMsg.size());
+	headers += "Location: " + redirection[1] + "\r\n";
+	_buffer = startLine + "\r\n" + headers + "\r\n" + bodyMsg;
+}
+
+string Response::createStartLine(int statusCode, std::string const &reason)
+{
+	string startLine = "HTTP/1.1 " + numToString(statusCode) + ' ' + reason;
+	return startLine;
+}
+
 bool Utils::isDirectory(char const pathname[])
 {
 	struct stat s;
@@ -544,4 +575,14 @@ bool Utils::isDirectory(char const pathname[])
 		return false;
 
 	return !!(s.st_mode & S_IFDIR);
+}
+
+namespace
+{
+	template<typename T> string numToString(T number)
+	{
+		stringstream ss;
+		ss << number;
+		return ss.str();
+	}
 }

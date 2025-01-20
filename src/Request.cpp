@@ -236,13 +236,18 @@ void Request::parseHeader()
 	while (temp < _buffer.size()) {
 		while (temp < _buffer.size() && (_buffer[temp] == '\r' || _buffer[temp] == '\n'))
 			++temp;
-		std::size_t end = _buffer.find("\r\n", temp);
+		std::size_t end = _buffer.find("\r\n");
+		if (end == 0)
+		{
+			_buffer.erase(0, std::strlen(HTTP_DELIMITER));
+			break;
+		}
 		if (end == std::string::npos)
 			break; 
    		 std::string line = _buffer.substr(temp, end - temp);
    		 t_pairStrings field = parseFieldLine(line);
     	_headers.insert(field);
-   		_buffer.erase(temp, (end - temp) + 2); 
+		_buffer.erase(temp, (end - temp) + std::strlen(HTTP_DELIMITER));
 }
 
 	/* Debugging: These line belows will be deleted in the end */
@@ -257,7 +262,7 @@ void Request::parseStartLine()
 	if (start != std::string::npos)
 	{
 		std::string line(_buffer.begin(), _buffer.begin() + start);
-		_buffer.erase(_buffer.begin(), _buffer.begin() + start + 1); 
+		_buffer.erase(_buffer.begin(), _buffer.begin() + start + std::strlen(HTTP_DELIMITER));
 		size_t targetPos = line.find(" ");
 		_startLine.method = line.substr(0,targetPos);
 		size_t targetPosEnd = line.find(" ", targetPos + 1);
@@ -554,7 +559,7 @@ Request::e_statusFunction Request::readBodyContent(char const contentLength[])
 		_body.data += _buffer.substr(0, appendSize);
 		_body.len += appendSize;
 		_body.chunkCompleted = true;
-		_buffer = _buffer.substr(appendSize);
+		_buffer = _buffer.substr(appendSize + std::strlen(HTTP_DELIMITER));
 		_phase = PHASE_BODY;
 	}
 	return STATUS_FUNCTION_NONE;
