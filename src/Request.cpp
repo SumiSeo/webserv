@@ -147,11 +147,18 @@ Request::e_phase Request::parse()
 		{
 			filterServers();
 			if (verifyRequest() == STATUS_FUNCTION_NONE)
+			{
 				parseBody();
+				_statusCode = ACCEPTED;
+			}
+
 		}
 	}
 	if (_phase == PHASE_BODY)
+	{
 		_phase = PHASE_COMPLETE;
+		_statusCode = OK;
+	}
 	if (_phase != PHASE_COMPLETE && _phase != PHASE_ERROR)
 	{
 		if (_buffer.size() >= MAX_BUFFER_LENGTH)

@@ -63,11 +63,13 @@ Response::Response(Request const &request, Server const &configs):
 	initContentType();
 	if(isError(request))
 	{
-		std::cout<<"THERE IS ERROR"<<std::endl;
+		std::cout<<"THERE IS ERROR WITH STATUS CODE"<<std::endl;
+		return;
 	}
 	splitRequestTarget(request.getStartLine().requestTarget);
 	_locationKey = request.getLocationKey();
 	_locationBlock = _serverBlock._locations.at(_locationKey);
+
 	if (!getValuesOf("return").empty())
 	{
 		handleRedirection();
@@ -105,6 +107,7 @@ Response::Response(Request const &request, Server const &configs):
 		}
 		_absolutePath += index;
 	}
+		std::cout <<" @@@PATH CHECK " << _absolutePath << std::endl;
 
 	if(isCGI())
 	{
@@ -122,11 +125,8 @@ Response::Response(Request const &request, Server const &configs):
 		int responseBodySize = responseBody.size();
 		string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
 		std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
-		std::cout << "HEADERS " << responseHeaders <<std::endl; 
 		string responseHeadersLine = responseHeaders + "\r\n";
 		_buffer = responseHeadersLine.append(responseBody);
-		std::cout << "fd check" << request.getFd()<<std::endl;
-		std::cout<<"buffer :" << _buffer <<std::endl;
 
 		//it ts is POST check and then if it is upload 
 		// I have to display bad request // 
@@ -340,17 +340,10 @@ endCGI:
 
 bool Response::isError(Request const &request)
 {
-	if(request.getPhase() == Request::PHASE_ERROR)
-	{
-		std::cout<<"Phase error"<< request.getPhase()<<std::endl;
-		return true;
-	}
-	if(request.getStatusCode()!= VALID && request.getStatusCode() >1 )
-	{
-	   std::cout<<"status code error"<<request.getStatusCode()<<std::endl;
-	   return true;
-	}
-	return false;
+	std::cout << "status code : " << request.getStatusCode()<<std::endl;
+	if(request.getStatusCode() == OK || request.getStatusCode() == ACCEPTED || request.getStatusCode() == CREATED )
+	   return false;
+	return true;
 }
 
 int Response::isCGI() const
