@@ -569,6 +569,6 @@ namespace
 	{
 		stringstream ss;
 		ss << number;
-		return number.str();
+		return ss.str();
 	}
 }
