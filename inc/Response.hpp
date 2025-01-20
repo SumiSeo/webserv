@@ -50,10 +50,6 @@ class Response
 	e_IOReturn retrieve();
 	e_IOReturn sendData(int fd);
 
-	std::string createResponseLine(Request const &request, std::string const & reason = "");
-	
-	std::string getDefaultHeaders(Request const &request);
-
   protected:
 
   private:
@@ -76,6 +72,8 @@ class Response
 	t_mapStrings _contentType;
 	
 	/* Methods */
+	std::string createResponseLine(Request const &request, std::string const & reason = "");
+	std::string getDefaultHeaders();
 	bool handleCGI(Request const &request, std::string const &cgiExecutable);
 	bool isError(Request const &request);
 	int isCGI() const;
