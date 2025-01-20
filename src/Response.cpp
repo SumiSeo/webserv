@@ -1,6 +1,8 @@
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
+#include <limits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -14,6 +16,7 @@
 #define CHILD_END 1
 
 using std::ifstream;
+using std::ofstream;
 using std::map;
 using std::string;
 using std::stringstream;
@@ -136,7 +139,7 @@ Response::Response(Request const &request, Server const &configs):
 		else if (method == "POST")
 		{
 			if (!_locationBlock.getValueOf("upload_path").empty())
-				handleUpload();
+				handleUpload(request);
 			else
 			{
 				// TODO: create response 405 Not Allowed
@@ -591,14 +594,46 @@ string Response::createStartLine(int statusCode, std::string const &reason)
 	return startLine;
 }
 
-void Response::handleUpload()
+void Response::handleUpload(Request const &request)
 {
 	string path = _locationBlock.getValueOf("upload_path");
 	string fileName = "tmpfile";
-	std::size_t num = 0;
-	while (true)
+	unsigned long num = 0;
+	bool newFile = false;
+	for (; num < std::numeric_limits<unsigned long>::max(); ++num)
 	{
+		string pathName = path + fileName + numToString(num);
+		if (access(pathName.c_str(), F_OK) != 0)
+		{
+			newFile = true;
+			break;
+		}
 	}
+	if (newFile)
+	{
+		try
+		{
+			fileName += numToString(num);
+			string pathName = path + fileName;
+			ofstream fileOutput(pathName.c_str());
+			fileOutput << request.getBody();
+			string startLine = createStartLine(201, "Created");
+			string bodyMsg = "Created";
+			string headers = getDefaultHeaders(bodyMsg.size());
+			headers += "Location: " + _locationKey + fileName + "\r\n";
+			_buffer = startLine + "\r\n" + headers + "\r\n" + bodyMsg;
+			return;
+		}
+		catch (std::ios_base::failure const &f)
+		{
+			std::cerr << "handleUpload Error : " << f.what() << std::endl;
+		}
+	}
+	string startLine = createStartLine(500, "Internal Server Error");
+	string bodyMsg = "Internal Server Error";
+	string headers = getDefaultHeaders(bodyMsg.size());
+
+	_buffer = startLine + "\r\n" + headers + "\r\n" + bodyMsg;
 }
 
 bool Utils::isDirectory(char const pathname[])

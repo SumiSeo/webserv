@@ -90,7 +90,7 @@ class Response
 	std::string getContentType(std::string const &file);
 	void handleRedirection();
 	std::string createStartLine(int statusCode, std::string const &reason = "");
-	void handleUpload();
+	void handleUpload(Request const &request);
 };
 
 #endif
