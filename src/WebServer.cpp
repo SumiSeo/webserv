@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cerrno>
+#include <csignal>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -50,6 +51,7 @@ namespace
 	};
 	char const *const DEFAULT_PORT = "8080";
 	std::size_t const MAX_EVENTS = 512;
+	sig_atomic_t g_sig = 0;
 }
 
 namespace Utils
@@ -82,6 +84,23 @@ WebServer::~WebServer()
 		close(_epollFd);
 	for (map<int, Request>::const_iterator it = _requests.begin(); it != _requests.end(); ++it)
 		close(it->first);
+}
+
+SignalHandler::SignalHandler(int sigNum, t_sigHandler handler):
+	_sigNum(sigNum)
+{
+	_prevHandler = std::signal(sigNum, handler);
+	if (_prevHandler == SIG_ERR)
+	{
+		std::perror("std::signal");
+		_prevHandler = SIG_DFL;
+	}
+}
+
+SignalHandler::~SignalHandler()
+{
+	if (std::signal(_sigNum, _prevHandler) == SIG_ERR)
+		std::perror("std::signal");
 }
 
 // --- Private --- //
@@ -295,6 +314,7 @@ void handleClient(int clientFd)
 
 void WebServer::loop()
 {
+	SignalHandler signalHandling(SIGINT, &Utils::sigchld_handler);
 	printf("server: waiting for connections...\n");
 	struct epoll_event event, events[MAX_EVENTS];
 	_epollFd = epoll_create1(0);
@@ -316,7 +336,7 @@ void WebServer::loop()
 		}
 	}
 
-	while(true)
+	while(g_sig == 0)
 	{
 		int numEvents = epoll_wait(_epollFd, events, MAX_EVENTS, -1);
 		if(numEvents == -1)
@@ -517,6 +537,24 @@ bool WebServer::handleCGIInput(int fd)
 	}
 	return false;
 }
+
+SignalHandler::SignalHandler():
+	_sigNum(0),
+	_prevHandler(SIG_DFL)
+{
+}
+
+SignalHandler::SignalHandler(SignalHandler const &):
+	_sigNum(0),
+	_prevHandler(SIG_DFL)
+{
+}
+
+SignalHandler &SignalHandler::operator=(SignalHandler const &)
+{
+	return *this;
+}
+
 //////////** ---Static functions-- **///////////
 t_vecString Utils::split(string const &str, char delim)
 {
@@ -559,12 +597,9 @@ bool Utils::isValidKeyLocation(string const &key)
 	return false;
 }
 
-void Utils::sigchld_handler(int s)
+void Utils::sigchld_handler(int)
 {
-	(void)s;
-	int saved_errno = errno;
-	while(waitpid(-1,NULL,WNOHANG) > 0);
-	errno = saved_errno;
+	g_sig = 1;
 }
 
 string Utils::getListenAddress(t_vecString const &listenValue)

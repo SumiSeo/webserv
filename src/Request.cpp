@@ -262,6 +262,7 @@ void Request::parseBody()
 	}
 	else
 		_phase = PHASE_BODY;
+	printBodyMessage();
 }
 
 Request::e_statusFunction Request::readChunkSize()
@@ -491,4 +492,9 @@ void Request::printStartLine()
 	std::cout<<"START LINE method : "<< _startLine.method <<std::endl;
 	std::cout<<"START LINE request Target: "<< _startLine.requestTarget<<std::endl;
 	std::cout<<"START LINE http version: "<< _startLine.httpVersion<<std::endl;
+}
+
+void Request::printBodyMessage()
+{
+	std::cout << "Body Message : [" << _body.data << ']' << std::endl;
 }

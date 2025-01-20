@@ -110,6 +110,7 @@ class Request
 	// -- debugging function -- /
 	void printRequest();
 	void printStartLine();
+	void printBodyMessage();
 
 	
 };
