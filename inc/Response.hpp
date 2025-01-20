@@ -74,7 +74,6 @@ class Response
 	/* Methods */
 	std::string createResponseLine(Request const &request, std::string const & reason = "");
 	std::string getDefaultHeaders();
-	bool handleCGI(Request const &request, std::string const &cgiExecutable);
 	bool isError(Request const &request);
 	int isCGI() const;
 	std::string getFileContent(std::string const &pathname) const;

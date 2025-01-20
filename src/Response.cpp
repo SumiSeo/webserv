@@ -91,7 +91,7 @@ Response::Response(Request const &request, Server const &configs):
 
 	if(isCGI())
 	{
-		if (!handleCGI(request, _locationBlock.getValueOf("cgi")))
+		if (!handleCGI(request))
 		{
 			// TODO: set internal error in the response
 		}
@@ -219,7 +219,7 @@ std::string Response::getDefaultHeaders()
 }
 
 // --- Private Methods --- //root 
-bool Response::handleCGI(Request const &request, string const &cgiExecutable)
+bool Response::handleCGI(Request const &request)
 {
 	int	socketPairFds[2];
 	if (socketpair(AF_UNIX, SOCK_STREAM, 0, socketPairFds) == -1)
@@ -227,6 +227,9 @@ bool Response::handleCGI(Request const &request, string const &cgiExecutable)
 		std::perror("socketpair");
 		return false;
 	}
+	string cgiExecutable = _locationBlock.getValueOf("cgi");
+	if (cgiExecutable.empty())
+		cgiExecutable = "/usr/bin/php-cgi";
 	_cgiPid = fork();
 	if (_cgiPid == -1)
 	{
@@ -246,6 +249,11 @@ bool Response::handleCGI(Request const &request, string const &cgiExecutable)
 			throw std::runtime_error("dup2 failed");
 		}
 		close(socketPairFds[CHILD_END]);
+		string root = getValueOf("root");
+		if (root.empty())
+			root = "/";
+		if (chdir(root.c_str()) == -1)
+			std::perror("chdir");
 
 		if (request.getBody().size() != 0)
 		{
@@ -317,9 +325,16 @@ bool Response::isError(Request const &request)
 
 int Response::isCGI() const
 {
-	typedef map<string, t_vecString> t_mapStringVecString;
-	t_mapStringVecString::const_iterator cgi = _locationBlock._pairs.find("cgi");
-	return cgi != _locationBlock._pairs.end() && cgi->second.size() != 0;
+	string cgi = _locationBlock.getValueOf("cgi");
+	if (!cgi.empty())
+		return true;
+
+	std::size_t pos = _absolutePath.rfind('.');
+	if (pos == string::npos)
+		return false;
+
+	string extension = _absolutePath.substr(pos + 1);
+	return extension == "php";
 }
 
 // /board/www/abc/index.html 
