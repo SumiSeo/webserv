@@ -80,6 +80,8 @@ class Request
 	std::size_t getServerIndex() const;
 	std::string getLocationKey() const;
 
+	void reset();
+
   protected:
 
   private:
@@ -131,6 +133,7 @@ class Request
 	// -- debugging function -- /
 	void printRequest();
 	void printStartLine();
+	void printBodyMessage();
 
 };
 

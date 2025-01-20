@@ -37,9 +37,7 @@ namespace Utils
 // --- Public Methods --- //
 Response::Response():
 	_cgiFd(-1),
-	_cgiPid(-1),
-	_cgiFinished(false),
-	_responseComplete(false)
+	_cgiPid(-1)
 {
 }
 
@@ -48,8 +46,6 @@ Response::Response(Response const &src):
 	_cgiData(src._cgiData),
 	_cgiFd(src._cgiFd),
 	_cgiPid(src._cgiPid),
-	_cgiFinished(src._cgiFinished),
-	_responseComplete(src._responseComplete),
 	_serverBlock(src._serverBlock),
 	_locationKey(src._locationKey),
 	_locationBlock(src._locationBlock),
@@ -61,8 +57,6 @@ Response::Response(Response const &src):
 
 Response::Response(Request const &request, Server const &configs):
 	_cgiFd(-1),
-	_cgiFinished(false),
-	_responseComplete(false),
 	_serverBlock(configs)
 {
 	initContentType();
@@ -84,7 +78,7 @@ Response::Response(Request const &request, Server const &configs):
 		if (index.empty())
 		{
 			string autoIndex = getValueOf("autoindex");
-			if (autoIndex.empty())
+			if (autoIndex.empty() || autoIndex == "off")
 			{
 				// TODO: set an error in the response 
 				return;
@@ -108,13 +102,14 @@ Response::Response(Request const &request, Server const &configs):
 	}
 	string responseLine = createResponseLine(request);
 	string responseHeaders = responseLine.append(getDefaultHeaders(request));
-	string responseBody = getFileContent("web/www/home/index.html");
+	std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
+	string responseBody = getFileContent(_absolutePath);
 	string _buffer = responseHeaders.append(responseBody);
 	std::cout << "fd check" << request.getFd()<<std::endl;
 	std::cout<<"buffer :" << _buffer <<std::endl;
 	int fd = request.getFd();
 	send(fd, _buffer.c_str(), _buffer.size(), 0);
-}	
+}
 
 Response::~Response()
 {
@@ -125,10 +120,7 @@ Response &Response::operator=(Response const &rhs)
 	_buffer = rhs._buffer;
 	_cgiData = rhs._cgiData;
 	_cgiFd = rhs._cgiFd;
-	_responseComplete = rhs._responseComplete;
 	_cgiPid = rhs._cgiPid;
-	_cgiFinished = rhs._cgiFinished;
-	_responseComplete = rhs._responseComplete;
 	_serverBlock = rhs._serverBlock;
 	_locationKey = rhs._locationKey;
 	_locationBlock = rhs._locationBlock;
@@ -148,14 +140,9 @@ string &Response::getResponse()
 	return _buffer;
 }
 
-bool Response::isComplete() const
-{
-	return _responseComplete;
-}
-
 void Response::setEndCGI()
 {
-	_cgiFinished = true;
+	_cgiFd = -1;
 }
 
 Response::e_IOReturn Response::retrieve()
@@ -163,14 +150,41 @@ Response::e_IOReturn Response::retrieve()
 	char buffer[MAX_BUFFER_LEN + 1];
 	ssize_t bytes = recv(_cgiFd, buffer, MAX_BUFFER_LEN, 0);
 	if (bytes == -1)
+	{
+		_cgiData = "Status: 500 Internal Server Error\n";
 		return IO_ERROR;
+	}
 
 	if (bytes == 0)
+	{
+		if (_cgiData.empty())
+			_cgiData = "Status: 500 Internal Server Error\n";
 		return IO_DISCONNECT;
+	}
 
 	buffer[bytes] = '\0';
 
 	_cgiData += buffer;
+	return IO_SUCCESS;
+}
+
+Response::e_IOReturn Response::sendData(int fd)
+{
+	if (_cgiFd != -1)
+		return O_NOT_READY;
+	if (!_cgiData.empty())
+		parseCGIResponse();
+	ssize_t bytes = send(fd, _buffer.c_str(), _buffer.size(), MSG_NOSIGNAL);
+
+	if (bytes == -1)
+		return IO_ERROR;
+
+	if (_buffer.size() != 0 && bytes == 0)
+		return IO_DISCONNECT;
+
+	if (static_cast<std::size_t>(bytes) != _buffer.size())
+		return O_INCOMPLETE;
+
 	return IO_SUCCESS;
 }
 
@@ -197,9 +211,10 @@ std::string Response::getDefaultHeaders(Request const &request)
 	std::strftime(formatted, sizeof(formatted), "%a, %d %b %Y %H:%M:%S ", ltm);
 	std::string formattedDate = formatted;
 	std::string formattedGMT = formattedDate.append("GMT");
+	std::string contentType = getContentType("index.html");
 	std::string server = "ft_webserv";
 	std::string version = "/" + request.getStartLine().httpVersion;
-	std::string url = "Server: " + server.append(version) + "\r\n" + "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
 	return url;
 }
 
@@ -375,7 +390,7 @@ void Response::parseCGIResponse()
 {
 	t_mapStrings cgiHeaders;
 	std::size_t pos = _cgiData.find("\n");
-	while (pos != 0)
+	while (pos != string::npos && pos != 0)
 	{
 		string headerLine = _cgiData.substr(0, pos);
 		_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 1);
@@ -388,7 +403,10 @@ void Response::parseCGIResponse()
 		}
 		pos = _cgiData.find("\n");
 	}
-	_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 1);
+	if (pos != string::npos)
+		_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 1);
+	else
+		_cgiData.erase(_cgiData.begin(), _cgiData.end());
 	if (cgiHeaders.find("Status") != cgiHeaders.end())
 	{
 		_buffer = "HTTP/1.1 " + cgiHeaders["Status"] + "\r\n";
@@ -406,7 +424,6 @@ void Response::parseCGIResponse()
 	}
 	_buffer += "\r\n" + _cgiData;
 	string().swap(_cgiData);
-	_responseComplete = true;
 }
 
 int Response::setAbsolutePathname()

@@ -79,4 +79,24 @@ class WebServer
 	void printKeyValues();
 };
 
+class SignalHandler
+{
+  private:
+	typedef void (*t_sigHandler)(int);
+
+  public:
+	SignalHandler(int sigNum, t_sigHandler handler);
+	~SignalHandler();
+
+  private:
+
+	int _sigNum;
+	t_sigHandler _prevHandler;
+
+	SignalHandler();
+	SignalHandler(SignalHandler const &src);
+
+	SignalHandler &operator=(SignalHandler const &rhs);
+};
+
 #endif

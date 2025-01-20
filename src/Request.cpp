@@ -213,6 +213,12 @@ string Request::getLocationKey() const
 	return _locationKey;
 }
 
+void Request::reset()
+{
+	_phase = PHASE_EMPTY;
+	_statusCode = NONE;
+}
+
 // --- Private --- //
 
 void Request::parseHeader()
@@ -330,6 +336,7 @@ void Request::parseBody()
 	}
 	else
 		_phase = PHASE_BODY;
+	printBodyMessage();
 }
 
 void Request::filterServers()
@@ -687,4 +694,9 @@ void Request::printStartLine()
 	std::cout<<"START LINE method : "<< _startLine.method <<std::endl;
 	std::cout<<"START LINE request Target: "<< _startLine.requestTarget<<std::endl;
 	std::cout<<"START LINE http version: "<< _startLine.httpVersion<<std::endl;
+}
+
+void Request::printBodyMessage()
+{
+	std::cout << "Body Message : [" << _body.data << ']' << std::endl;
 }

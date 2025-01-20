@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <csignal>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -52,6 +53,7 @@ namespace
 	};
 	char const *const DEFAULT_PORT = "8080";
 	std::size_t const MAX_EVENTS = 512;
+	sig_atomic_t g_sig = 0;
 }
 
 namespace Utils
@@ -85,6 +87,23 @@ WebServer::~WebServer()
 		close(_epollFd);
 	for (map<int, Request>::const_iterator it = _requests.begin(); it != _requests.end(); ++it)
 		close(it->first);
+}
+
+SignalHandler::SignalHandler(int sigNum, t_sigHandler handler):
+	_sigNum(sigNum)
+{
+	_prevHandler = std::signal(sigNum, handler);
+	if (_prevHandler == SIG_ERR)
+	{
+		std::perror("std::signal");
+		_prevHandler = SIG_DFL;
+	}
+}
+
+SignalHandler::~SignalHandler()
+{
+	if (std::signal(_sigNum, _prevHandler) == SIG_ERR)
+		std::perror("std::signal");
 }
 
 // --- Private --- //
@@ -338,6 +357,7 @@ void handleClient(int clientFd)
 
 void WebServer::loop()
 {
+	SignalHandler signalHandling(SIGINT, &Utils::sigchld_handler);
 	printf("server: waiting for connections...\n");
 	struct epoll_event event, events[MAX_EVENTS];
 	_epollFd = epoll_create1(0);
@@ -359,7 +379,7 @@ void WebServer::loop()
 		}
 	}
 
-	while(true)
+	while(g_sig == 0)
 	{
 		int numEvents = epoll_wait(_epollFd, events, MAX_EVENTS, -1);
 		if(numEvents == -1)
@@ -388,9 +408,15 @@ void WebServer::loop()
 				if (_socketFds.find(fd) != _socketFds.end())
 					_socketFds.erase(fd);
 				else if (_requests.find(fd) != _requests.end())
+				{
 					_requests.erase(fd);
+					_responses.erase(fd);
+				}
 				else if (_cgiFdToResponseFd.find(fd) != _cgiFdToResponseFd.end())
+				{
 					handleCGIInput(fd);
+					_cgiFdToResponseFd.erase(fd);
+				}
 				if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
 					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
 				close(fd);
@@ -435,7 +461,7 @@ void WebServer::loop()
 							std::perror("recv");
 						shouldDisconnect = true;
 					}
-					else
+					else if (_responses.find(fd) == _responses.end())
 					{
 						Request::e_phase phase = request.parse();
 						if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
@@ -446,7 +472,7 @@ void WebServer::loop()
 							if (cgiFd != -1)
 							{
 								std::memset(&event, 0, sizeof(event));
-								event.events = EPOLLIN | EPOLLOUT;
+								event.events = EPOLLIN;
 								event.data.fd = cgiFd;
 								if(epoll_ctl(_epollFd, EPOLL_CTL_ADD, cgiFd, &event) == -1)
 								{
@@ -470,13 +496,29 @@ void WebServer::loop()
 			}
 			if (!shouldDisconnect && events[i].events & EPOLLOUT)
 			{
-				// TODO: Check if a response exists and if it is complete to send it
+				if (_requests.find(fd) != _requests.end())
+				{
+					Response::e_IOReturn sendReturn = _responses[fd].sendData(fd);
+					if (sendReturn == Response::IO_ERROR || sendReturn == Response::IO_DISCONNECT
+						|| sendReturn == Response::O_INCOMPLETE)
+					{
+						if (sendReturn == Response::IO_ERROR)
+							std::perror("send");
+						shouldDisconnect = true;
+					}
+					if (sendReturn != Response::O_NOT_READY)
+					{
+						_requests[fd].reset();
+						_responses.erase(fd);
+					}
+				}
 			}
 			if (shouldDisconnect)
 			{
 				if(epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
 					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
 				_requests.erase(fd);
+				_responses.erase(fd);
 				_cgiFdToResponseFd.erase(fd);
 				close(fd);
 			}
@@ -561,6 +603,8 @@ int WebServer::createServer()
 bool WebServer::handleCGIInput(int fd)
 {
 	int clientFd = _cgiFdToResponseFd[fd];
+	if (_responses.find(clientFd) == _responses.end())
+		return true;
 	Response &response = _responses[clientFd];
 	Response::e_IOReturn recvReturn = response.retrieve();
 	if (recvReturn == Response::IO_ERROR || recvReturn == Response::IO_DISCONNECT)
@@ -601,6 +645,24 @@ bool WebServer::isValidValue(std::string const &key, t_vecStrings const &values)
 	}
 	return true;
 }
+
+SignalHandler::SignalHandler():
+	_sigNum(0),
+	_prevHandler(SIG_DFL)
+{
+}
+
+SignalHandler::SignalHandler(SignalHandler const &):
+	_sigNum(0),
+	_prevHandler(SIG_DFL)
+{
+}
+
+SignalHandler &SignalHandler::operator=(SignalHandler const &)
+{
+	return *this;
+}
+
 //////////** ---Static functions-- **///////////
 t_vecStrings Utils::split(string const &str, char delim)
 {
@@ -643,12 +705,9 @@ bool Utils::isValidKeyLocation(string const &key)
 	return false;
 }
 
-void Utils::sigchld_handler(int s)
+void Utils::sigchld_handler(int)
 {
-	(void)s;
-	int saved_errno = errno;
-	while(waitpid(-1,NULL,WNOHANG) > 0);
-	errno = saved_errno;
+	g_sig = 1;
 }
 
 string Utils::getListenAddress(t_vecStrings const &listenValue)

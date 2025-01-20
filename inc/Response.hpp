@@ -22,6 +22,8 @@ class Response
 	{
 		IO_ERROR,
 		IO_DISCONNECT,
+		O_NOT_READY,
+		O_INCOMPLETE,
 		IO_SUCCESS,
 	};
 
@@ -46,6 +48,7 @@ class Response
 	bool isComplete() const;
 	void setEndCGI();
 	e_IOReturn retrieve();
+	e_IOReturn sendData(int fd);
 
 	std::string createResponseLine(Request const &request, std::string const & reason = "");
 	
@@ -62,8 +65,6 @@ class Response
 	std::string _cgiData;
 	int _cgiFd;
 	pid_t _cgiPid;
-	bool _cgiFinished;
-	bool _responseComplete;
 	ResponseLine _responseLine;
 	std::string _headers;
 	Server _serverBlock;
