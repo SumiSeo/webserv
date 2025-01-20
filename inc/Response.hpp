@@ -50,10 +50,6 @@ class Response
 	e_IOReturn retrieve();
 	e_IOReturn sendData(int fd);
 
-	std::string createResponseLine(Request const &request, std::string const & reason = "");
-	
-	std::string getDefaultHeaders(Request const &request);
-
   protected:
 
   private:
@@ -76,12 +72,14 @@ class Response
 	t_mapStrings _contentType;
 	
 	/* Methods */
-	bool handleCGI(Request const &request, std::string const &cgiExecutable);
+	std::string createResponseLine(Request const &request, std::string const & reason = "");
+	std::string getDefaultHeaders(std::size_t size);
 	bool isError(Request const &request);
 	int isCGI() const;
 	std::string getFileContent(std::string const &pathname) const;
 	char **headersToEnv(t_mapStrings const &headers, t_mapStrings const &cgiHeaders) const;
 	void splitRequestTarget(std::string const &requestTarget);
+	bool handleCGI(Request const &request);
 	void parseCGIResponse();
 	int setLocationBlock(Request const &request);
 	int setAbsolutePathname();

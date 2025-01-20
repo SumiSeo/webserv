@@ -97,24 +97,24 @@ Response::Response(Request const &request, Server const &configs):
 
 	if(isCGI())
 	{
-		if (!handleCGI(request, _locationBlock.getValueOf("cgi")))
+		if (!handleCGI(request))
 		{
 			// TODO: set internal error in the response
 		}
 	}
 	else
 	{
-		//if it is not cgi static response should be sent to client
+		string responseLine = createResponseLine(request);
+		string responseBody = getFileContent(_absolutePath);
+		int responseBodySize = responseBody.size();
+		string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
+		std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
+		std::cout << "HEADERS " << responseHeaders <<std::endl; 
+		string responseHeadersLine = responseHeaders + "\r\n";
+		_buffer = responseHeadersLine.append(responseBody);
+		std::cout << "fd check" << request.getFd()<<std::endl;
+		std::cout<<"buffer :" << _buffer <<std::endl;
 	}
-	string responseLine = createResponseLine(request);
-	string responseHeaders = responseLine.append(getDefaultHeaders(request));
-	std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
-	string responseBody = getFileContent(_absolutePath);
-	string _buffer = responseHeaders.append(responseBody);
-	std::cout << "fd check" << request.getFd()<<std::endl;
-	std::cout<<"buffer :" << _buffer <<std::endl;
-	int fd = request.getFd();
-	send(fd, _buffer.c_str(), _buffer.size(), 0);
 }
 
 Response::~Response()
@@ -208,7 +208,7 @@ std::string Response::createResponseLine(Request const &request, std::string con
 	return responseLine;
 }
 
-std::string Response::getDefaultHeaders(Request const &request)
+std::string Response::getDefaultHeaders(std::size_t size)
 {
 	time_t now;
 	time(&now);
@@ -219,13 +219,16 @@ std::string Response::getDefaultHeaders(Request const &request)
 	std::string formattedGMT = formattedDate.append("GMT");
 	std::string contentType = getContentType("index.html");
 	std::string server = "ft_webserv";
-	std::string version = "/" + request.getStartLine().httpVersion;
-	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n"  + "\r\n";
+	std::string version = "/1.0";
+	stringstream convertedSize;
+	convertedSize << size;
+	string finalSize = convertedSize.str();
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" +"Content-length: " + finalSize + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
 	return url;
 }
 
 // --- Private Methods --- //root 
-bool Response::handleCGI(Request const &request, string const &cgiExecutable)
+bool Response::handleCGI(Request const &request)
 {
 	int	socketPairFds[2];
 	if (socketpair(AF_UNIX, SOCK_STREAM, 0, socketPairFds) == -1)
@@ -233,6 +236,9 @@ bool Response::handleCGI(Request const &request, string const &cgiExecutable)
 		std::perror("socketpair");
 		return false;
 	}
+	string cgiExecutable = _locationBlock.getValueOf("cgi");
+	if (cgiExecutable.empty())
+		cgiExecutable = "/usr/bin/php-cgi";
 	_cgiPid = fork();
 	if (_cgiPid == -1)
 	{
@@ -252,6 +258,11 @@ bool Response::handleCGI(Request const &request, string const &cgiExecutable)
 			throw std::runtime_error("dup2 failed");
 		}
 		close(socketPairFds[CHILD_END]);
+		string root = getValueOf("root");
+		if (root.empty())
+			root = "/";
+		if (chdir(root.c_str()) == -1)
+			std::perror("chdir");
 
 		if (request.getBody().size() != 0)
 		{
@@ -323,9 +334,16 @@ bool Response::isError(Request const &request)
 
 int Response::isCGI() const
 {
-	typedef map<string, t_vecStrings> t_mapStringVecString;
-	t_mapStringVecString::const_iterator cgi = _locationBlock._pairs.find("cgi");
-	return cgi != _locationBlock._pairs.end() && cgi->second.size() != 0;
+	string cgi = _locationBlock.getValueOf("cgi");
+	if (!cgi.empty())
+		return true;
+
+	std::size_t pos = _absolutePath.rfind('.');
+	if (pos == string::npos)
+		return false;
+
+	string extension = _absolutePath.substr(pos + 1);
+	return extension == "php";
 }
 
 // /board/www/abc/index.html 
@@ -420,14 +438,9 @@ void Response::parseCGIResponse()
 	}
 	else
 		_buffer = "HTTP/1.1 200 OK\r\n";
-	// _buffer += getDefaultHeaders() + "\r\n";
+	_buffer += getDefaultHeaders(_cgiData.size()) + "\r\n";
 	for (t_mapStrings::const_iterator it = cgiHeaders.begin(); it != cgiHeaders.end(); ++it)
 		_buffer += it->first + ": " + it->second + "\r\n";
-	{
-		stringstream ss;
-		ss << _cgiData.size();
-		_buffer += "Content-Length: " + ss.str() + "\r\n";
-	}
 	_buffer += "\r\n" + _cgiData;
 	string().swap(_cgiData);
 }
@@ -438,6 +451,8 @@ int Response::setAbsolutePathname()
 	if (root.empty())
 		return 1;
 	_absolutePath += root + _requestFile.substr(_locationKey.size());
+	if (_absolutePath[_absolutePath.size() - 1] == '/')
+		_absolutePath += getValueOf("index");
 	return 0;
 }
 
