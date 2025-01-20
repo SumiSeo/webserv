@@ -365,9 +365,15 @@ void WebServer::loop()
 				if (_socketFds.find(fd) != _socketFds.end())
 					_socketFds.erase(fd);
 				else if (_requests.find(fd) != _requests.end())
+				{
 					_requests.erase(fd);
+					_responses.erase(fd);
+				}
 				else if (_cgiFdToResponseFd.find(fd) != _cgiFdToResponseFd.end())
+				{
 					handleCGIInput(fd);
+					_cgiFdToResponseFd.erase(fd);
+				}
 				if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
 					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
 				close(fd);
@@ -406,7 +412,7 @@ void WebServer::loop()
 							std::perror("recv");
 						shouldDisconnect = true;
 					}
-					else
+					else if (_responses.find(fd) == _responses.end())
 					{
 						Request::e_phase phase = request.parse();
 						if (phase == Request::PHASE_ERROR || phase == Request::PHASE_COMPLETE)
@@ -417,7 +423,7 @@ void WebServer::loop()
 							if (cgiFd != -1)
 							{
 								std::memset(&event, 0, sizeof(event));
-								event.events = EPOLLIN | EPOLLOUT;
+								event.events = EPOLLIN;
 								event.data.fd = cgiFd;
 								if(epoll_ctl(_epollFd, EPOLL_CTL_ADD, cgiFd, &event) == -1)
 								{
@@ -441,13 +447,29 @@ void WebServer::loop()
 			}
 			if (!shouldDisconnect && events[i].events & EPOLLOUT)
 			{
-				// TODO: Check if a response exists and if it is complete to send it
+				if (_requests.find(fd) != _requests.end())
+				{
+					Response::e_IOReturn sendReturn = _responses[fd].sendData(fd);
+					if (sendReturn == Response::IO_ERROR || sendReturn == Response::IO_DISCONNECT
+						|| sendReturn == Response::O_INCOMPLETE)
+					{
+						if (sendReturn == Response::IO_ERROR)
+							std::perror("send");
+						shouldDisconnect = true;
+					}
+					if (sendReturn != Response::O_NOT_READY)
+					{
+						_requests[fd].reset();
+						_responses.erase(fd);
+					}
+				}
 			}
 			if (shouldDisconnect)
 			{
 				if(epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
 					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
 				_requests.erase(fd);
+				_responses.erase(fd);
 				_cgiFdToResponseFd.erase(fd);
 				close(fd);
 			}
@@ -526,6 +548,8 @@ int WebServer::createServer()
 bool WebServer::handleCGIInput(int fd)
 {
 	int clientFd = _cgiFdToResponseFd[fd];
+	if (_responses.find(clientFd) == _responses.end())
+		return true;
 	Response &response = _responses[clientFd];
 	Response::e_IOReturn recvReturn = response.retrieve();
 	if (recvReturn == Response::IO_ERROR || recvReturn == Response::IO_DISCONNECT)
