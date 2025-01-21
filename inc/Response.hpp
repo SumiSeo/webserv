@@ -92,6 +92,7 @@ class Response
 	std::string createStartLine(int statusCode, std::string const &reason = "");
 	void handleUpload(Request const &request);
 	void handleDelete(Request const &request);
+	std::string listDirectory(Request const &request);
 };
 
 #endif
