@@ -415,6 +415,9 @@ endCGI:
 bool Response::isError(Request const &request)
 {
 	std::cout << "status code : " << request.getStatusCode()<<std::endl;
+	if (request.getPhase() == Request::PHASE_ERROR)
+		return true;
+
 	if(request.getStatusCode() == OK || request.getStatusCode() == ACCEPTED || request.getStatusCode() == CREATED )
 	   return false;
 	return true;
