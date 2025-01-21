@@ -1,15 +1,20 @@
 #include <cstring>
+#include <vector>
 #include <sstream>
 
 #include "Server.hpp"
 
 using std::map;
 using std::string;
+using std::vector;
+
+typedef vector<string> t_vecStrings;
 using std::stringstream;
 
 namespace
 {
-	std::size_t lenLongestPrefix(char const str1[], char const str2[]);
+	std::size_t lenLongestPrefix(string const &str1, string const &str2);
+	t_vecStrings split(string const &str, char sep);
 }
 
 Server::Server()
@@ -68,8 +73,9 @@ string Server::searchLocationKey(string const &requestTarget) const
 		std::size_t lenPrefix = 0;
 
 		if (locationKey[locationKey.size() - 1] == '/')
-			lenPrefix = lenLongestPrefix(locationKey.c_str(), requestTarget.c_str());
-		else if (std::strcmp(locationKey.c_str(), requestTarget.c_str()) == 0)
+			lenPrefix = lenLongestPrefix(locationKey, requestTarget);
+		else if (locationKey.size() == requestTarget.size()
+			&& std::strcmp(locationKey.c_str(), requestTarget.c_str()) == 0)
 			return locationKey;
 
 		if (lenPrefix > lenMax)
@@ -126,15 +132,34 @@ string Server::getErrorPage(int errorCode)
 
 namespace
 {
-	std::size_t lenLongestPrefix(char const str1[], char const str2[])
+	std::size_t lenLongestPrefix(string const &str1, string const &str2)
 	{
+		t_vecStrings components1 = split(str1, '/');
+		t_vecStrings components2 = split(str2, '/');
 		std::size_t i = 0;
-		while (str1[i] != '\0' && str2[i] != '\0')
+		for (t_vecStrings::const_iterator it1 = components1.begin(), it2 = components2.begin(); it1 != components1.end() && it2 != components2.end(); ++it1, ++it2)
 		{
-			if (str1[i] != str2[i])
+			if (*it1 != *it2)
 				break;
 			++i;
 		}
 		return i;
+	}
+	t_vecStrings split(string const &str, char sep)
+	{
+		t_vecStrings output;
+		std::size_t pos = 0;
+		while (true)
+		{
+			std::size_t end = str.find(sep, pos);
+			if (end == string::npos)
+				break;
+			output.push_back(str.substr(pos, end - pos + 1));
+			pos = end + 1;
+		}
+		string temp = str.substr(pos);
+		if (!temp.empty())
+			output.push_back(temp);
+		return output;
 	}
 }
