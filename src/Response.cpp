@@ -87,37 +87,27 @@ Response::Response(Request const &request, Server const &configs):
 	{
 		string autoIndex = getValueOf("autoindex");
 		if (autoIndex.empty() || autoIndex != "on")
-		{
-			string responseLine = createStartLine(403, "Forbidden");
-			string responseBody;
-			string errorPath = _serverBlock.getErrorPage(403);
-			if (errorPath.empty())
-				responseBody = "Forbidden";
-			else
-				responseBody = getFileContent(errorPath);
-			_absolutePath = ".txt";
-			string responseHeaders = getDefaultHeaders(responseBody.size());
-			_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
-		}
+			createBuffer(403, "Forbidden");
 		else
 		{
 			string responseLine;
 			string responseBody = listDirectory(request);
-			if (responseBody.empty())
+			if (!responseBody.empty())
+			{
 				responseLine = createStartLine(200, "Ok");
+				_absolutePath = ".html";
+				string responseHeaders = getDefaultHeaders(responseBody.size());
+				_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
+			}
 			else
-				responseLine = createStartLine(403, "Forbidden");
-
-			_absolutePath = ".html";
-			string responseHeaders = getDefaultHeaders(responseBody.size());
-			_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
+				createBuffer(403, "Forbidden");
 		}
 		return;
 	}
 	if(isCGI())
 	{
 		if (!handleCGI(request))
-			createBuffer(request, 3);
+			createBuffer(500, "Not implemented");
 	}
 	else
 	{
@@ -125,12 +115,7 @@ Response::Response(Request const &request, Server const &configs):
 		if (method == "GET")
 		{
 			if (access(_absolutePath.c_str(), F_OK | R_OK) == -1)
-			{
-				string responseLine = createStartLine(NOT_FOUND, "Not Found");
-				string responseBody = "Not Found"; // TODO: replace it by the content of error page if exists;
-				string responseHeaders = getDefaultHeaders(responseBody.size());
-				_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
-			}
+				createBuffer(NOT_FOUND, "Not Found");
 			else
 			{
 				string responseLine = createResponseLine(request);
@@ -152,8 +137,7 @@ Response::Response(Request const &request, Server const &configs):
 			else
 			{
 				std::cout<< "POST failed: " << _locationBlock.getValueOf("upload_path")<<std::endl;
-				createBuffer(request, 3);
-				return;
+				createBuffer(405, "Not Allowed");
 			}
 		}
 		else if (method == "DELETE")
@@ -161,36 +145,37 @@ Response::Response(Request const &request, Server const &configs):
 			if (!_locationBlock.getValueOf("upload_path").empty())
 				handleDelete(request);
 			else
-				createBuffer(request,3);
+				createBuffer(405, "Not Allowed");
 		}
 	}
 }
 
 void Response::createErrorResponse(Request const &request)
 {
-	string responseLine = createResponseLine(request);
-	string responseBody = getFileContent(_absolutePath);
+	string responseLine = createStartLine(request.getStatusCode());
+	string responseBody;
 	int responseBodySize = responseBody.size();
 	string responseHeaders = responseLine.append(getClosedHeaders(responseBodySize));
+	responseHeaders += "Connection: close\r\n";
 	string responseHeadersLine = responseHeaders + "\r\n";
 	_buffer = responseHeadersLine.append(responseBody);
 }
 
 
-void Response::createBuffer(Request const &request, int autoIndex)
+void Response::createBuffer(int statusCode, string const &reason)
 {
-	std::string path;
-	if(autoIndex == 3)
-		path="/tmp/web/www/errors/default.html";
+	string responseLine = createStartLine(statusCode, reason);
+	string errorPath = _serverBlock.getErrorPage(statusCode);
+	string responseBody;
+	if (errorPath.empty())
+		responseBody = reason;
 	else
-		path = autoIndex != 1 ? _absolutePath : _absolutePath + "index.html";
-	string responseLine = createResponseLine(request);
-	string responseBody = getFileContent(path);
+		responseBody = getFileContent(errorPath);
+	_absolutePath = ".txt";
 	int responseBodySize = responseBody.size();
 	string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
 	string responseHeadersLine = responseHeaders + "\r\n";
 	_buffer = responseHeadersLine.append(responseBody);
-
 }
 
 Response::~Response()
