@@ -10,6 +10,7 @@
 #include <sstream>
 #include <sys/socket.h>
 
+#include "Server.hpp"
 #include "Response.hpp"
 
 #define PARENT_END 0
@@ -69,6 +70,7 @@ Response::Response(Request const &request, Server const &configs):
 	if(isError(request))
 	{
 		std::cout<<"THERE IS ERROR WITH STATUS CODE"<<std::endl;
+		// I have to create response again;
 		return;
 	}
 	splitRequestTarget(request.getStartLine().requestTarget);
@@ -90,24 +92,12 @@ Response::Response(Request const &request, Server const &configs):
 			string autoIndex = getValueOf("autoindex");
 			if (autoIndex.empty() || autoIndex == "off")
 			{
-				string responseLine = createResponseLine(request);
-				_absolutePath = "/tmp/web/www/errors/";
-				string responseBody = getFileContent(_absolutePath+ "404.html");
-				int responseBodySize = responseBody.size();
-				string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
-				string responseHeadersLine = responseHeaders + "\r\n";
-				_buffer = responseHeadersLine.append(responseBody);
-
+				createBuffer(request, 0);
 				return;
 			}
 			else
 			{
-				string responseLine = createResponseLine(request);
-				string responseBody = getFileContent(_absolutePath + "index.html");
-				int responseBodySize = responseBody.size();
-				string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
-				string responseHeadersLine = responseHeaders + "\r\n";
-				_buffer = responseHeadersLine.append(responseBody);
+				createBuffer(request, 1);
 			}
 			return;
 		}
@@ -126,16 +116,7 @@ Response::Response(Request const &request, Server const &configs):
 		string const &method = request.getStartLine().method;
 		if (method == "GET")
 		{
-			string responseLine = createResponseLine(request);
-			string responseBody = getFileContent(_absolutePath);
-			int responseBodySize = responseBody.size();
-			string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
-			std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
-			std::cout << "HEADERS " << responseHeaders <<std::endl; 
-			string responseHeadersLine = responseHeaders + "\r\n";
-			_buffer = responseHeadersLine.append(responseBody);
-			std::cout << "fd check" << request.getFd()<<std::endl;
-			std::cout<<"buffer :" << _buffer <<std::endl;
+			createBuffer(request, 2);
 		}
 		else if (method == "POST")
 		{
@@ -143,9 +124,12 @@ Response::Response(Request const &request, Server const &configs):
 				handleUpload(request);
 			else
 			{
+				std::cout<< "POST failed: " << _locationBlock.getValueOf("upload_path")<<std::endl;
 				// TODO: create response 405 Not Allowed
 				//it ts is POST check and then if it is upload 
 				// I have to display bad request // 
+				createBuffer(request, 3);
+				return;
 			}
 		}
 		else if (method == "DELETE")
@@ -158,6 +142,23 @@ Response::Response(Request const &request, Server const &configs):
 			}
 		}
 	}
+}
+
+void Response::createBuffer(Request const &request, int autoIndex)
+{
+	std::string path = autoIndex != 1 ? _absolutePath : _absolutePath + "index.html";
+	if(autoIndex == 3)
+	{
+		path="/tmp/web/www/errors/404.html";
+	}
+	std::cout  <<"path : "<< path<<std::endl;
+	string responseLine = createResponseLine(request);
+	string responseBody = getFileContent(path);
+	int responseBodySize = responseBody.size();
+	string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
+	string responseHeadersLine = responseHeaders + "\r\n";
+	_buffer = responseHeadersLine.append(responseBody);
+	
 }
 
 Response::~Response()

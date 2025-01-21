@@ -92,6 +92,7 @@ class Response
 	std::string createStartLine(int statusCode, std::string const &reason = "");
 	void handleUpload(Request const &request);
 	void handleDelete(Request const &request);
+	void createBuffer(Request const &request, int autoIndex);
 };
 
 #endif
