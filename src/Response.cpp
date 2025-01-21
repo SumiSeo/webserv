@@ -100,12 +100,14 @@ Response::Response(Request const &request, Server const &configs):
 			}
 			else
 			{
-				string responseLine = createResponseLine(request);
-				string responseBody = getFileContent(_absolutePath + "index.html");
-				int responseBodySize = responseBody.size();
-				string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
-				string responseHeadersLine = responseHeaders + "\r\n";
-				_buffer = responseHeadersLine.append(responseBody);
+				std::ofstream		file;
+				// I have to modify here 
+				// string responseLine = createResponseLine(request);
+				// string responseBody = getFileContent(_absolutePath + "index.html");
+				// int responseBodySize = responseBody.size();
+				// string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
+				// string responseHeadersLine = responseHeaders + "\r\n";
+				// _buffer = responseHeadersLine.append(responseBody);
 			}
 			return;
 		}
