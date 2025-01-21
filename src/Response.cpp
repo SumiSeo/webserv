@@ -82,7 +82,6 @@ Response::Response(Request const &request, Server const &configs):
 	std::cout <<" @@@PATH CHECK " << _absolutePath << std::endl;
 	if (Utils::isDirectory(_absolutePath.c_str()))
 	{
-		string index = getValueOf("index");
 		if (index.empty())
 		{
 			string autoIndex = getValueOf("autoindex");
@@ -109,7 +108,6 @@ Response::Response(Request const &request, Server const &configs):
 			}
 			return;
 		}
-		_absolutePath += index;
 	}
 	if(isCGI())
 	{
