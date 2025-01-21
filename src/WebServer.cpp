@@ -500,7 +500,8 @@ void WebServer::loop()
 				{
 					Response::e_IOReturn sendReturn = _responses[fd].sendData(fd);
 					if (sendReturn == Response::IO_ERROR || sendReturn == Response::IO_DISCONNECT
-						|| sendReturn == Response::O_INCOMPLETE)
+						|| sendReturn == Response::O_INCOMPLETE
+						|| _requests[fd].getPhase() == Request::PHASE_ERROR)
 					{
 						if (sendReturn == Response::IO_ERROR)
 							std::perror("send");
