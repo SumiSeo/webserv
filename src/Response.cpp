@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -84,17 +85,34 @@ Response::Response(Request const &request, Server const &configs):
 	setAbsolutePathname();
 	if (Utils::isDirectory(_absolutePath.c_str()))
 	{
-		string index = getValueOf("index");
-		if (index.empty())
+		string autoIndex = getValueOf("autoindex");
+		if (autoIndex.empty() || autoIndex != "on")
 		{
-			string autoIndex = getValueOf("autoindex");
-			if (autoIndex.empty() || autoIndex == "off")
-				createBuffer(request, 0);
+			string responseLine = createStartLine(403, "Forbidden");
+			string responseBody;
+			string errorPath = _serverBlock.getErrorPage(403);
+			if (errorPath.empty())
+				responseBody = "Forbidden";
 			else
-				createBuffer(request, 1);
-			return;
+				responseBody = getFileContent(errorPath);
+			_absolutePath = ".txt";
+			string responseHeaders = getDefaultHeaders(responseBody.size());
+			_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
 		}
-		_absolutePath += index;
+		else
+		{
+			string responseLine;
+			string responseBody = listDirectory(request);
+			if (responseBody.empty())
+				responseLine = createStartLine(200, "Ok");
+			else
+				responseLine = createStartLine(403, "Forbidden");
+
+			_absolutePath = ".html";
+			string responseHeaders = getDefaultHeaders(responseBody.size());
+			_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
+		}
+		return;
 	}
 	if(isCGI())
 	{
@@ -105,7 +123,28 @@ Response::Response(Request const &request, Server const &configs):
 	{
 		string const &method = request.getStartLine().method;
 		if (method == "GET")
-			createBuffer(request, 2);
+		{
+			if (access(_absolutePath.c_str(), F_OK | R_OK) == -1)
+			{
+				string responseLine = createStartLine(NOT_FOUND, "Not Found");
+				string responseBody = "Not Found"; // TODO: replace it by the content of error page if exists;
+				string responseHeaders = getDefaultHeaders(responseBody.size());
+				_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
+			}
+			else
+			{
+				string responseLine = createResponseLine(request);
+				string responseBody = getFileContent(_absolutePath);
+				int responseBodySize = responseBody.size();
+				string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
+				std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
+				std::cout << "HEADERS " << responseHeaders <<std::endl; 
+				string responseHeadersLine = responseHeaders + "\r\n";
+				_buffer = responseHeadersLine.append(responseBody);
+				std::cout << "fd check" << request.getFd()<<std::endl;
+				std::cout<<"buffer :" << _buffer <<std::endl;
+			}
+		}
 		else if (method == "POST")
 		{
 			if (!_locationBlock.getValueOf("upload_path").empty())
@@ -254,7 +293,7 @@ std::string Response::getDefaultHeaders(std::size_t size)
 	std::strftime(formatted, sizeof(formatted), "%a, %d %b %Y %H:%M:%S ", ltm);
 	std::string formattedDate = formatted;
 	std::string formattedGMT = formattedDate.append("GMT");
-	std::string contentType = getContentType("index.html");
+	std::string contentType = getContentType(_absolutePath);
 	std::string server = "ft_webserv";
 	std::string version = "/1.0";
 	stringstream convertedSize;
@@ -592,6 +631,7 @@ void Response::handleRedirection()
 	t_vecStrings redirection = getValuesOf("return");
 	string startLine = createStartLine(std::atoi(redirection[0].c_str()));
 	string bodyMsg = "Redirecting";
+	_absolutePath = ".txt";
 	string headers = getDefaultHeaders(bodyMsg.size());
 	headers += "Location: " + redirection[1] + "\r\n";
 	_buffer = startLine + "\r\n" + headers + "\r\n" + bodyMsg;
@@ -627,6 +667,7 @@ void Response::handleUpload(Request const &request)
 			ofstream fileOutput(pathName.c_str());
 			fileOutput << request.getBody();
 			string startLine = createStartLine(201, "Created");
+			_absolutePath = ".txt";
 			string headers = getDefaultHeaders(0);
 			headers += "Location: " + _locationKey + fileName + "\r\n";
 			_buffer = startLine + "\r\n" + headers + "\r\n";
@@ -639,6 +680,7 @@ void Response::handleUpload(Request const &request)
 	}
 	string startLine = createStartLine(500, "Internal Server Error");
 	string bodyMsg = "Internal Server Error";
+	_absolutePath = ".txt";
 	string headers = getDefaultHeaders(bodyMsg.size());
 
 	_buffer = startLine + "\r\n" + headers + "\r\n" + bodyMsg;
@@ -655,8 +697,48 @@ void Response::handleDelete(Request const &request)
 			std::perror("unlink");
 	}
 	string startLine = createStartLine(202, "Accepted");
+	_absolutePath = ".txt";
 	string headers = getDefaultHeaders(0);
 	_buffer = startLine + "\r\n" + headers + "\r\n";
+}
+
+string Response::listDirectory(Request const &request)
+{
+	DIR *directory = opendir(_absolutePath.c_str());
+	if (directory == NULL)
+		return string();
+
+	string htmlCode =
+"<html>\
+<head>\
+<title>Index of " + request.getStartLine().requestTarget + "</title>\
+</head>\
+<body>\
+<h1>Index of " + request.getStartLine().requestTarget + "</h1>\
+<hr>\
+<pre>";
+	struct dirent *dp;
+	while ((dp = readdir(directory)) != NULL)
+	{
+		char *fileName = dp->d_name;
+		if (std::strncmp(fileName, ".", 2) == 0)
+			continue;
+		if (std::strncmp(fileName, "..", 3) == 0)
+			continue;
+		string pathName = fileName;
+		if (dp->d_type == DT_DIR)
+			pathName += '/';
+		string line = "<a href=\"" + pathName + "\">" + pathName + "</a>";
+		htmlCode += line + "<br>";
+	}
+	htmlCode +=
+"</pre>\
+</hr>\
+</body>\
+</html>";
+	if (closedir(directory) == -1)
+		std::perror("closedir");
+	return htmlCode;
 }
 
 bool Utils::isDirectory(char const pathname[])

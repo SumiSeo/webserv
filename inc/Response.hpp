@@ -95,7 +95,7 @@ class Response
 	void createBuffer(Request const &request, int autoIndex);
 	std::string getClosedHeaders(std::size_t size);
 	void createErrorResponse(Request const &request);
-
+	std::string listDirectory(Request const &request);
 };
 
 #endif
