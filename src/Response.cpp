@@ -95,6 +95,7 @@ Response::Response(Request const &request, Server const &configs):
 				responseBody = "Forbidden";
 			else
 				responseBody = getFileContent(errorPath);
+			_absolutePath = ".txt";
 			string responseHeaders = getDefaultHeaders(responseBody.size());
 			_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
 		}
@@ -107,6 +108,7 @@ Response::Response(Request const &request, Server const &configs):
 			else
 				responseLine = createStartLine(403, "Forbidden");
 
+			_absolutePath = ".html";
 			string responseHeaders = getDefaultHeaders(responseBody.size());
 			_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
 		}
@@ -259,7 +261,7 @@ std::string Response::getDefaultHeaders(std::size_t size)
 	std::strftime(formatted, sizeof(formatted), "%a, %d %b %Y %H:%M:%S ", ltm);
 	std::string formattedDate = formatted;
 	std::string formattedGMT = formattedDate.append("GMT");
-	std::string contentType = getContentType("index.html");
+	std::string contentType = getContentType(_absolutePath);
 	std::string server = "ft_webserv";
 	std::string version = "/1.0";
 	stringstream convertedSize;
@@ -578,6 +580,7 @@ void Response::handleRedirection()
 	t_vecStrings redirection = getValuesOf("return");
 	string startLine = createStartLine(std::atoi(redirection[0].c_str()));
 	string bodyMsg = "Redirecting";
+	_absolutePath = ".txt";
 	string headers = getDefaultHeaders(bodyMsg.size());
 	headers += "Location: " + redirection[1] + "\r\n";
 	_buffer = startLine + "\r\n" + headers + "\r\n" + bodyMsg;
@@ -613,6 +616,7 @@ void Response::handleUpload(Request const &request)
 			ofstream fileOutput(pathName.c_str());
 			fileOutput << request.getBody();
 			string startLine = createStartLine(201, "Created");
+			_absolutePath = ".txt";
 			string headers = getDefaultHeaders(0);
 			headers += "Location: " + _locationKey + fileName + "\r\n";
 			_buffer = startLine + "\r\n" + headers + "\r\n";
@@ -625,6 +629,7 @@ void Response::handleUpload(Request const &request)
 	}
 	string startLine = createStartLine(500, "Internal Server Error");
 	string bodyMsg = "Internal Server Error";
+	_absolutePath = ".txt";
 	string headers = getDefaultHeaders(bodyMsg.size());
 
 	_buffer = startLine + "\r\n" + headers + "\r\n" + bodyMsg;
@@ -641,6 +646,7 @@ void Response::handleDelete(Request const &request)
 			std::perror("unlink");
 	}
 	string startLine = createStartLine(202, "Accepted");
+	_absolutePath = ".txt";
 	string headers = getDefaultHeaders(0);
 	_buffer = startLine + "\r\n" + headers + "\r\n";
 }
