@@ -135,26 +135,18 @@ Request::e_phase Request::parse()
 	if (_phase == PHASE_EMPTY)
 		parseStartLine();
 	if (_phase == PHASE_START_LINE)
+	{
 		parseHeader();
+		if (_phase == PHASE_HEADERS)
+		{
+			if (filterServers() != STATUS_FUNCTION_SHOULD_RETURN)
+				verifyRequest();
+		}
+	}
 	if (_phase == PHASE_HEADERS)
 	{
-		if (_headers.find("HOST") == _headers.end())
-		{
-			_phase = PHASE_ERROR;
-			_statusCode = BAD_REQUEST;
-									std::cout<<"4 "<<std::endl;
-
-		}
-		else
-		{
-			filterServers();
-			if (verifyRequest() == STATUS_FUNCTION_NONE)
-			{
-				parseBody();
-				_statusCode = ACCEPTED;
-			}
-
-		}
+		parseBody();
+		_statusCode = ACCEPTED;
 	}
 	if (_phase == PHASE_BODY)
 	{
@@ -366,8 +358,15 @@ void Request::parseBody()
 	printBodyMessage();
 }
 
-void Request::filterServers()
+Request::e_statusFunction Request::filterServers()
 {
+	if (_headers.find("HOST") == _headers.end())
+	{
+		_phase = PHASE_ERROR;
+		_statusCode = BAD_REQUEST;
+		std::cout<<"4 "<<std::endl;
+		return STATUS_FUNCTION_SHOULD_RETURN;
+	}
 	string host = _headers["HOST"].substr(0, _headers["HOST"].find(":"));
 	t_vecServers const &servers = *_servers;
 	std::size_t index = 0;
@@ -407,6 +406,7 @@ void Request::filterServers()
 	}
 	Server const &server = (*_servers)[_serverIndex];
 	_locationKey = server.searchLocationKey(_startLine.requestTarget);
+	return STATUS_FUNCTION_NONE;
 }
 
 Request::e_statusFunction Request::verifyRequest()

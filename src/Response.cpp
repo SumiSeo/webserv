@@ -28,6 +28,8 @@ namespace
 {
 	std::size_t const MAX_BUFFER_LEN = 8192;
 	template<typename T> string numToString(T number);
+	bool isValidPathToDelete(string const &path);
+	t_vecStrings split(string const &str, char sep);
 }
 
 namespace Utils
@@ -634,10 +636,12 @@ void Response::handleDelete(Request const &request)
 	string path = _locationBlock.getValueOf("upload_path");
 	string fileName = request.getStartLine().requestTarget.substr(_locationKey.size() - 1);
 	string pathName = path + fileName;
-	string startLine;
-	if (unlink(pathName.c_str()) == -1)
-		std::perror("unlink");
-	startLine = createStartLine(202, "Accepted");
+	if (isValidPathToDelete(pathName))
+	{
+		if (unlink(pathName.c_str()) == -1)
+			std::perror("unlink");
+	}
+	string startLine = createStartLine(202, "Accepted");
 	string headers = getDefaultHeaders(0);
 	_buffer = startLine + "\r\n" + headers + "\r\n";
 }
@@ -658,5 +662,33 @@ namespace
 		stringstream ss;
 		ss << number;
 		return ss.str();
+	}
+	bool isValidPathToDelete(string const &path)
+	{
+		t_vecStrings components = split(path, '/');
+		for (t_vecStrings::const_iterator it = components.begin(); it != components.end(); ++it)
+		{
+			if (*it == ".." || *it == ".")
+				return false;
+		}
+		return true;
+	}
+	t_vecStrings split(string const &str, char sep)
+	{
+		t_vecStrings output;
+		std::size_t pos = 0;
+		while (true)
+		{
+			std::size_t end = str.find(sep, pos);
+			if (end == string::npos)
+				break;
+			if (end != pos)
+				output.push_back(str.substr(pos, end - pos));
+			pos = end + 1;
+		}
+		string temp = str.substr(pos);
+		if (!temp.empty())
+			output.push_back(temp);
+		return output;
 	}
 }
