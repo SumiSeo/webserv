@@ -69,8 +69,7 @@ Response::Response(Request const &request, Server const &configs):
 	initContentType();
 	if(isError(request))
 	{
-		std::cout<<"THERE IS ERROR WITH STATUS CODE"<<std::endl;
-		// I have to create response again;
+		createErrorResponse(request);
 		return;
 	}
 	splitRequestTarget(request.getStartLine().requestTarget);
@@ -83,7 +82,6 @@ Response::Response(Request const &request, Server const &configs):
 		return;
 	}
 	setAbsolutePathname();
-	std::cout <<" @@@PATH CHECK " << _absolutePath << std::endl;
 	if (Utils::isDirectory(_absolutePath.c_str()))
 	{
 		string index = getValueOf("index");
@@ -91,14 +89,9 @@ Response::Response(Request const &request, Server const &configs):
 		{
 			string autoIndex = getValueOf("autoindex");
 			if (autoIndex.empty() || autoIndex == "off")
-			{
 				createBuffer(request, 0);
-				return;
-			}
 			else
-			{
 				createBuffer(request, 1);
-			}
 			return;
 		}
 		_absolutePath += index;
@@ -106,18 +99,13 @@ Response::Response(Request const &request, Server const &configs):
 	if(isCGI())
 	{
 		if (!handleCGI(request))
-		{
-			// Pascal control if CGI fails
-			// TODO: set internal error in the response
-		}
+			createBuffer(request, 3);
 	}
 	else
 	{
 		string const &method = request.getStartLine().method;
 		if (method == "GET")
-		{
 			createBuffer(request, 2);
-		}
 		else if (method == "POST")
 		{
 			if (!_locationBlock.getValueOf("upload_path").empty())
@@ -125,9 +113,6 @@ Response::Response(Request const &request, Server const &configs):
 			else
 			{
 				std::cout<< "POST failed: " << _locationBlock.getValueOf("upload_path")<<std::endl;
-				// TODO: create response 405 Not Allowed
-				//it ts is POST check and then if it is upload 
-				// I have to display bad request // 
 				createBuffer(request, 3);
 				return;
 			}
@@ -137,28 +122,36 @@ Response::Response(Request const &request, Server const &configs):
 			if (!_locationBlock.getValueOf("upload_path").empty())
 				handleDelete(request);
 			else
-			{
-				// TODO: create response 405 Not Allowed
-			}
+				createBuffer(request,3);
 		}
 	}
 }
 
+void Response::createErrorResponse(Request const &request)
+{
+	string responseLine = createResponseLine(request);
+	string responseBody = getFileContent(_absolutePath);
+	int responseBodySize = responseBody.size();
+	string responseHeaders = responseLine.append(getClosedHeaders(responseBodySize));
+	string responseHeadersLine = responseHeaders + "\r\n";
+	_buffer = responseHeadersLine.append(responseBody);
+}
+
+
 void Response::createBuffer(Request const &request, int autoIndex)
 {
-	std::string path = autoIndex != 1 ? _absolutePath : _absolutePath + "index.html";
+	std::string path;
 	if(autoIndex == 3)
-	{
-		path="/tmp/web/www/errors/404.html";
-	}
-	std::cout  <<"path : "<< path<<std::endl;
+		path="/tmp/web/www/errors/default.html";
+	else
+		path = autoIndex != 1 ? _absolutePath : _absolutePath + "index.html";
 	string responseLine = createResponseLine(request);
 	string responseBody = getFileContent(path);
 	int responseBodySize = responseBody.size();
 	string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
 	string responseHeadersLine = responseHeaders + "\r\n";
 	_buffer = responseHeadersLine.append(responseBody);
-	
+
 }
 
 Response::~Response()
@@ -268,6 +261,25 @@ std::string Response::getDefaultHeaders(std::size_t size)
 	convertedSize << size;
 	string finalSize = convertedSize.str();
 	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" +"Content-length: " + finalSize + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
+	return url;
+}
+
+std::string Response::getClosedHeaders(std::size_t size)
+{
+	time_t now;
+	time(&now);
+	tm *ltm = localtime(&now);
+    char formatted[100];
+	std::strftime(formatted, sizeof(formatted), "%a, %d %b %Y %H:%M:%S ", ltm);
+	std::string formattedDate = formatted;
+	std::string formattedGMT = formattedDate.append("GMT");
+	std::string contentType = getContentType("index.html");
+	std::string server = "ft_webserv";
+	std::string version = "/1.0";
+	stringstream convertedSize;
+	convertedSize << size;
+	string finalSize = convertedSize.str();
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Connection: clsoe" +"Content-type: " + contentType + "\r\n" +"Content-length: " + finalSize + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
 	return url;
 }
 

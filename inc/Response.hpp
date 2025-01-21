@@ -93,6 +93,9 @@ class Response
 	void handleUpload(Request const &request);
 	void handleDelete(Request const &request);
 	void createBuffer(Request const &request, int autoIndex);
+	std::string getClosedHeaders(std::size_t size);
+	void createErrorResponse(Request const &request);
+
 };
 
 #endif
