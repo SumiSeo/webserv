@@ -282,6 +282,18 @@ void WebServer::tokenToMap(t_vecStrings::const_iterator start,
 			server._locations.insert(std::make_pair(locationKey, location));
     	}
 	}
+	else if (*start == "error_page")
+	{
+		++start;
+		if (start == end)
+			return;
+		string errorKey = *start;
+		++start;
+		if (start == end)
+			return;
+		string errorValue = *start;
+		server._errorPages.insert(std::make_pair(errorKey, errorValue));
+	}
 	else
 	{
 		if (!Utils::isValidKeyServer(*start))
@@ -496,7 +508,7 @@ void WebServer::loop()
 			}
 			if (!shouldDisconnect && events[i].events & EPOLLOUT)
 			{
-				if (_requests.find(fd) != _requests.end())
+				if (_requests.find(fd) != _requests.end() && _responses.find(fd) != _responses.end())
 				{
 					Response::e_IOReturn sendReturn = _responses[fd].sendData(fd);
 					if (sendReturn == Response::IO_ERROR || sendReturn == Response::IO_DISCONNECT

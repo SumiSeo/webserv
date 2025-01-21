@@ -114,7 +114,7 @@ class Request
 	void parseStartLine();
 	void parseHeader();
 	void parseBody();
-	void filterServers();
+	e_statusFunction filterServers();
 	e_statusFunction verifyRequest();
 
 	e_statusFunction readChunkSize();

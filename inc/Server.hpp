@@ -15,6 +15,7 @@ struct Server
 	/* Members */
 	std::map<std::string, t_vecStrings> _configs;
 	std::map<std::string, Location> _locations;
+	std::map<std::string, std::string> _errorPages;
 
 	/* Methods */
 	Server();
@@ -28,6 +29,8 @@ struct Server
 	std::string searchLocationKey(std::string const &requestTarget) const;
 	bool checkValuesOf(std::string const &target, std::string const &testValue) const;
 	bool checkValueOf(std::string const &target, std::string const &testValue) const;
+	std::string getErrorPage(std::string const &errorCode);
+	std::string getErrorPage(int errorCode);
 };
 
 #endif

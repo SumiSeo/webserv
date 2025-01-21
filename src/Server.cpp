@@ -1,9 +1,11 @@
 #include <cstring>
+#include <sstream>
 
 #include "Server.hpp"
 
 using std::map;
 using std::string;
+using std::stringstream;
 
 namespace
 {
@@ -103,6 +105,23 @@ bool Server::checkValueOf(std::string const &target, std::string const &testValu
 	string value = getValueOf(target);
 
 	return value == testValue;
+}
+
+string Server::getErrorPage(string const &errorCode)
+{
+	typedef map<string, string> t_mapStrings;
+
+	t_mapStrings::const_iterator errorPage = _errorPages.find(errorCode);
+	if (errorPage == _errorPages.end())
+		return string();
+	return errorPage->second;
+}
+
+string Server::getErrorPage(int errorCode)
+{
+	stringstream ss;
+	ss << errorCode;
+	return getErrorPage(ss.str());
 }
 
 namespace
