@@ -11,6 +11,7 @@
 #include <sstream>
 #include <sys/socket.h>
 
+#include "Server.hpp"
 #include "Response.hpp"
 
 #define PARENT_END 0
@@ -69,7 +70,7 @@ Response::Response(Request const &request, Server const &configs):
 	initContentType();
 	if(isError(request))
 	{
-		std::cout<<"THERE IS ERROR WITH STATUS CODE"<<std::endl;
+		createErrorResponse(request);
 		return;
 	}
 	splitRequestTarget(request.getStartLine().requestTarget);
@@ -82,7 +83,6 @@ Response::Response(Request const &request, Server const &configs):
 		return;
 	}
 	setAbsolutePathname();
-	std::cout <<" @@@PATH CHECK " << _absolutePath << std::endl;
 	if (Utils::isDirectory(_absolutePath.c_str()))
 	{
 		string autoIndex = getValueOf("autoindex");
@@ -117,10 +117,7 @@ Response::Response(Request const &request, Server const &configs):
 	if(isCGI())
 	{
 		if (!handleCGI(request))
-		{
-			// Pascal control if CGI fails
-			// TODO: set internal error in the response
-		}
+			createBuffer(request, 3);
 	}
 	else
 	{
@@ -154,9 +151,9 @@ Response::Response(Request const &request, Server const &configs):
 				handleUpload(request);
 			else
 			{
-				// TODO: create response 405 Not Allowed
-				//it ts is POST check and then if it is upload 
-				// I have to display bad request // 
+				std::cout<< "POST failed: " << _locationBlock.getValueOf("upload_path")<<std::endl;
+				createBuffer(request, 3);
+				return;
 			}
 		}
 		else if (method == "DELETE")
@@ -164,11 +161,36 @@ Response::Response(Request const &request, Server const &configs):
 			if (!_locationBlock.getValueOf("upload_path").empty())
 				handleDelete(request);
 			else
-			{
-				// TODO: create response 405 Not Allowed
-			}
+				createBuffer(request,3);
 		}
 	}
+}
+
+void Response::createErrorResponse(Request const &request)
+{
+	string responseLine = createResponseLine(request);
+	string responseBody = getFileContent(_absolutePath);
+	int responseBodySize = responseBody.size();
+	string responseHeaders = responseLine.append(getClosedHeaders(responseBodySize));
+	string responseHeadersLine = responseHeaders + "\r\n";
+	_buffer = responseHeadersLine.append(responseBody);
+}
+
+
+void Response::createBuffer(Request const &request, int autoIndex)
+{
+	std::string path;
+	if(autoIndex == 3)
+		path="/tmp/web/www/errors/default.html";
+	else
+		path = autoIndex != 1 ? _absolutePath : _absolutePath + "index.html";
+	string responseLine = createResponseLine(request);
+	string responseBody = getFileContent(path);
+	int responseBodySize = responseBody.size();
+	string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
+	string responseHeadersLine = responseHeaders + "\r\n";
+	_buffer = responseHeadersLine.append(responseBody);
+
 }
 
 Response::~Response()
@@ -278,6 +300,25 @@ std::string Response::getDefaultHeaders(std::size_t size)
 	convertedSize << size;
 	string finalSize = convertedSize.str();
 	std::string url = "Server: " + server.append(version) + "\r\n" + "Content-type: " + contentType + "\r\n" +"Content-length: " + finalSize + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
+	return url;
+}
+
+std::string Response::getClosedHeaders(std::size_t size)
+{
+	time_t now;
+	time(&now);
+	tm *ltm = localtime(&now);
+    char formatted[100];
+	std::strftime(formatted, sizeof(formatted), "%a, %d %b %Y %H:%M:%S ", ltm);
+	std::string formattedDate = formatted;
+	std::string formattedGMT = formattedDate.append("GMT");
+	std::string contentType = getContentType("index.html");
+	std::string server = "ft_webserv";
+	std::string version = "/1.0";
+	stringstream convertedSize;
+	convertedSize << size;
+	string finalSize = convertedSize.str();
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Connection: clsoe" +"Content-type: " + contentType + "\r\n" +"Content-length: " + finalSize + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
 	return url;
 }
 
