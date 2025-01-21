@@ -124,16 +124,26 @@ Response::Response(Request const &request, Server const &configs):
 		string const &method = request.getStartLine().method;
 		if (method == "GET")
 		{
-			string responseLine = createResponseLine(request);
-			string responseBody = getFileContent(_absolutePath);
-			int responseBodySize = responseBody.size();
-			string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
-			std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
-			std::cout << "HEADERS " << responseHeaders <<std::endl; 
-			string responseHeadersLine = responseHeaders + "\r\n";
-			_buffer = responseHeadersLine.append(responseBody);
-			std::cout << "fd check" << request.getFd()<<std::endl;
-			std::cout<<"buffer :" << _buffer <<std::endl;
+			if (access(_absolutePath.c_str(), F_OK | R_OK) == -1)
+			{
+				string responseLine = createStartLine(NOT_FOUND, "Not Found");
+				string responseBody = "Not Found"; // TODO: replace it by the content of error page if exists;
+				string responseHeaders = getDefaultHeaders(responseBody.size());
+				_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
+			}
+			else
+			{
+				string responseLine = createResponseLine(request);
+				string responseBody = getFileContent(_absolutePath);
+				int responseBodySize = responseBody.size();
+				string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
+				std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
+				std::cout << "HEADERS " << responseHeaders <<std::endl; 
+				string responseHeadersLine = responseHeaders + "\r\n";
+				_buffer = responseHeadersLine.append(responseBody);
+				std::cout << "fd check" << request.getFd()<<std::endl;
+				std::cout<<"buffer :" << _buffer <<std::endl;
+			}
 		}
 		else if (method == "POST")
 		{
