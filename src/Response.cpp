@@ -83,27 +83,6 @@ Response::Response(Request const &request, Server const &configs):
 		return;
 	}
 	setAbsolutePathname();
-	if (Utils::isDirectory(_absolutePath.c_str()))
-	{
-		string autoIndex = getValueOf("autoindex");
-		if (autoIndex.empty() || autoIndex != "on")
-			createBuffer(403, "Forbidden");
-		else
-		{
-			string responseLine;
-			string responseBody = listDirectory(request);
-			if (!responseBody.empty())
-			{
-				responseLine = createStartLine(200, "Ok");
-				_absolutePath = ".html";
-				string responseHeaders = getDefaultHeaders(responseBody.size());
-				_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
-			}
-			else
-				createBuffer(403, "Forbidden");
-		}
-		return;
-	}
 	if(isCGI())
 	{
 		if (!handleCGI(request))
@@ -118,6 +97,27 @@ Response::Response(Request const &request, Server const &configs):
 				createBuffer(NOT_FOUND, "Not Found");
 			else
 			{
+				if (Utils::isDirectory(_absolutePath.c_str()))
+				{
+					string autoIndex = getValueOf("autoindex");
+					if (autoIndex.empty() || autoIndex != "on")
+						createBuffer(403, "Forbidden");
+					else
+					{
+						string responseLine;
+						string responseBody = listDirectory(request);
+						if (!responseBody.empty())
+						{
+							responseLine = createStartLine(200, "Ok");
+							_absolutePath = ".html";
+							string responseHeaders = getDefaultHeaders(responseBody.size());
+							_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
+						}
+						else
+							createBuffer(403, "Forbidden");
+					}
+					return;
+				}
 				string responseLine = createResponseLine(request);
 				string responseBody = getFileContent(_absolutePath);
 				int responseBodySize = responseBody.size();
@@ -155,10 +155,8 @@ void Response::createErrorResponse(Request const &request)
 	string responseLine = createStartLine(request.getStatusCode());
 	string responseBody;
 	int responseBodySize = responseBody.size();
-	string responseHeaders = responseLine.append(getClosedHeaders(responseBodySize));
-	responseHeaders += "Connection: close\r\n";
-	string responseHeadersLine = responseHeaders + "\r\n";
-	_buffer = responseHeadersLine.append(responseBody);
+	string responseHeaders = getClosedHeaders(responseBodySize);
+	_buffer = responseLine + "\r\n" + responseHeaders + "\r\n";
 }
 
 
@@ -173,9 +171,8 @@ void Response::createBuffer(int statusCode, string const &reason)
 		responseBody = getFileContent(errorPath);
 	_absolutePath = ".txt";
 	int responseBodySize = responseBody.size();
-	string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
-	string responseHeadersLine = responseHeaders + "\r\n";
-	_buffer = responseHeadersLine.append(responseBody);
+	string responseHeaders = getDefaultHeaders(responseBodySize);
+	_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
 }
 
 Response::~Response()
@@ -303,7 +300,7 @@ std::string Response::getClosedHeaders(std::size_t size)
 	stringstream convertedSize;
 	convertedSize << size;
 	string finalSize = convertedSize.str();
-	std::string url = "Server: " + server.append(version) + "\r\n" + "Connection: clsoe" +"Content-type: " + contentType + "\r\n" +"Content-length: " + finalSize + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
+	std::string url = "Server: " + server.append(version) + "\r\n" + "Connection: close\r\n" + "Content-type: " + contentType + "\r\n" +"Content-length: " + finalSize + "\r\n" "Date: " + formattedGMT + "\r\n" + "Age: 0" + "\r\n";
 	return url;
 }
 

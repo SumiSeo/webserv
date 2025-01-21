@@ -403,20 +403,9 @@ void WebServer::loop()
 		{
 			int fd = events[i].data.fd;
 			bool shouldDisconnect = false;
-			if (events[i].events & EPOLLERR)
+			if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP)
 			{
 				cerr << "Error event occured on a fd" << endl;
-				if (_socketFds.find(fd) != _socketFds.end())
-					_socketFds.erase(fd);
-				else
-					_requests.erase(fd);
-				if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)
-					std::perror("epoll_ctl(EPOLL_CTL_DEL)");
-				close(fd);
-				continue;
-			}
-			if (events[i].events & EPOLLHUP)
-			{
 				if (_socketFds.find(fd) != _socketFds.end())
 					_socketFds.erase(fd);
 				else if (_requests.find(fd) != _requests.end())
@@ -495,11 +484,6 @@ void WebServer::loop()
 								else
 									_cgiFdToResponseFd[cgiFd] = fd;
 							}
-							
-							// TODO: Create a response for either of these 2 phases
-							// we will create a map for response 
-							// int fd of request 
-							// key = int (fd), value = Response class
 						}
 					}
 				}
