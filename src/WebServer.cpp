@@ -405,7 +405,6 @@ void WebServer::loop()
 			bool shouldDisconnect = false;
 			if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP)
 			{
-				cerr << "Error event occured on a fd" << endl;
 				if (_socketFds.find(fd) != _socketFds.end())
 					_socketFds.erase(fd);
 				else if (_requests.find(fd) != _requests.end())
@@ -416,6 +415,12 @@ void WebServer::loop()
 				else if (_cgiFdToResponseFd.find(fd) != _cgiFdToResponseFd.end())
 				{
 					handleCGIInput(fd);
+					int clientFd = _cgiFdToResponseFd[fd];
+					if (_responses.find(clientFd) != _responses.end())
+					{
+						Response &response = _responses[clientFd];
+						response.setEndCGI();
+					}
 					_cgiFdToResponseFd.erase(fd);
 				}
 				if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1)

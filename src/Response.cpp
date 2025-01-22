@@ -226,9 +226,7 @@ Response::e_IOReturn Response::retrieve()
 		return IO_DISCONNECT;
 	}
 
-	buffer[bytes] = '\0';
-
-	_cgiData += buffer;
+	_cgiData.append(buffer, bytes);
 	return IO_SUCCESS;
 }
 
@@ -486,24 +484,22 @@ void Response::splitRequestTarget(string const &requestTarget)
 void Response::parseCGIResponse()
 {
 	t_mapStrings cgiHeaders;
-	std::size_t pos = _cgiData.find("\n");
+	std::size_t pos = _cgiData.find("\r\n");
 	while (pos != string::npos && pos != 0)
 	{
 		string headerLine = _cgiData.substr(0, pos);
-		_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 1);
-		pos = headerLine.find(":");
+		_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 2);
+		pos = headerLine.find(':');
 		if (pos != string::npos)
 		{
 			string fieldName = headerLine.substr(0, pos);
 			string fieldValue = Utils::trimString(headerLine.substr(pos + 1), " \t");
 			cgiHeaders[fieldName] = fieldValue;
 		}
-		pos = _cgiData.find("\n");
+		pos = _cgiData.find("\r\n");
 	}
-	if (pos != string::npos)
-		_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 1);
-	else
-		_cgiData.erase(_cgiData.begin(), _cgiData.end());
+	if (pos == 0)
+		_cgiData.erase(_cgiData.begin(), _cgiData.begin() + pos + 2);
 	if (cgiHeaders.find("Status") != cgiHeaders.end())
 	{
 		_buffer = "HTTP/1.1 " + cgiHeaders["Status"] + "\r\n";
@@ -511,7 +507,7 @@ void Response::parseCGIResponse()
 	}
 	else
 		_buffer = "HTTP/1.1 200 OK\r\n";
-	_buffer += getDefaultHeaders(_cgiData.size()) + "\r\n";
+	_buffer += getDefaultHeaders(_cgiData.size());
 	for (t_mapStrings::const_iterator it = cgiHeaders.begin(); it != cgiHeaders.end(); ++it)
 		_buffer += it->first + ": " + it->second + "\r\n";
 	_buffer += "\r\n" + _cgiData;
