@@ -45,7 +45,8 @@ namespace Utils
 // --- Public Methods --- //
 Response::Response():
 	_cgiFd(-1),
-	_cgiPid(-1)
+	_cgiPid(-1),
+	_timeUpdated(0)
 {
 }
 
@@ -59,13 +60,15 @@ Response::Response(Response const &src):
 	_locationBlock(src._locationBlock),
 	_requestFile(src._requestFile),
 	_requestQuery(src._requestQuery),
-	_absolutePath(src._absolutePath)
+	_absolutePath(src._absolutePath),
+	_timeUpdated(src._timeUpdated)
 {
 }
 
 Response::Response(Request const &request, Server const &configs):
 	_cgiFd(-1),
-	_serverBlock(configs)
+	_serverBlock(configs),
+	_timeUpdated(std::time(NULL))
 {
 	initContentType();
 	if(isError(request))
@@ -257,6 +260,11 @@ Response::e_IOReturn Response::sendData(int fd)
 		return O_INCOMPLETE;
 
 	return IO_SUCCESS;
+}
+
+std::time_t Response::getTime() const
+{
+	return _timeUpdated;
 }
 
 std::string Response::createResponseLine(Request const &request, std::string const & reason)

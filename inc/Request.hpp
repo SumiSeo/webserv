@@ -1,6 +1,7 @@
 #ifndef __REQUEST_HPP__
 # define __REQUEST_HPP__
 
+# include <ctime>
 # include <map>
 # include <string>
 # include <utility>
@@ -79,6 +80,7 @@ class Request
 	std::string const &getPort() const;
 	std::size_t getServerIndex() const;
 	std::string getLocationKey() const;
+	std::time_t getTime() const;
 
 	void reset();
 
@@ -107,6 +109,7 @@ class Request
 	std::string _address;
 	std::string _port;
 	std::size_t _maxBodySize;
+	std::time_t _timeUpdated;
 
 
 	/* Methods */

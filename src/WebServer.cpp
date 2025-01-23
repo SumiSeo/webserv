@@ -54,6 +54,7 @@ namespace
 	char const *const DEFAULT_PORT = "8080";
 	std::size_t const MAX_EVENTS = 512;
 	sig_atomic_t g_sig = 0;
+	time_t const TIMEOUT_SECONDS = 30;
 }
 
 namespace Utils
@@ -524,6 +525,38 @@ void WebServer::loop()
 				_cgiFdToResponseFd.erase(fd);
 				close(fd);
 			}
+		}
+		vector<int> toRemove;
+		for (std::map<int, Request>::iterator it = _requests.begin(); it != _requests.end(); ++it)
+		{
+			int const &fd = it->first;
+			std::time_t actualTime = std::time(NULL);
+			if (actualTime - it->second.getTime() > TIMEOUT_SECONDS)
+			{
+				int cgiFd = _responses[fd].getFdCGI();
+				_responses.erase(fd);
+				close(cgiFd);
+				_cgiFdToResponseFd.erase(cgiFd);
+				toRemove.push_back(fd);
+			}
+		}
+		for (std::map<int, int>::iterator it = _cgiFdToResponseFd.begin(); it != _cgiFdToResponseFd.end(); ++it)
+		{
+			int const &clientFd = it->second;
+			std::time_t actualTime = std::time(NULL);
+			if (actualTime - _responses[clientFd].getTime() > TIMEOUT_SECONDS)
+			{
+				_responses[clientFd].setEndCGI();
+				toRemove.push_back(it->first);
+			}
+		}
+		for (vector<int>::iterator it = toRemove.begin(); it != toRemove.end(); ++it)
+		{
+			int const &fd = *it;
+			_requests.erase(fd);
+			_responses.erase(fd);
+			_cgiFdToResponseFd.erase(fd);
+			close(fd);
 		}
 	}
 }

@@ -49,6 +49,7 @@ class Response
 	void setEndCGI();
 	e_IOReturn retrieve();
 	e_IOReturn sendData(int fd);
+	std::time_t getTime() const;
 
   protected:
 
@@ -70,6 +71,7 @@ class Response
 	std::string _requestQuery;
 	std::string _absolutePath;
 	t_mapStrings _contentType;
+	std::time_t _timeUpdated;
 	
 	/* Methods */
 	std::string createResponseLine(Request const &request, std::string const & reason = "");

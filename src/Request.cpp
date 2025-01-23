@@ -48,7 +48,8 @@ Request::Request():
 	_statusCode(NONE),
 	_servers(NULL),
 	_serverIndex(0),
-	_maxBodySize(0)
+	_maxBodySize(0),
+	_timeUpdated(0)
 {
 }
 
@@ -66,7 +67,8 @@ Request::Request(Request const &src):
 	_serverIndex(src._serverIndex),
 	_address(src._address),
 	_port(src._port),
-	_maxBodySize(src._maxBodySize)
+	_maxBodySize(src._maxBodySize),
+	_timeUpdated(src._timeUpdated)
 {
 }
 
@@ -90,6 +92,7 @@ Request::Request(int fd, int socketFd, t_vecServers *servers):
 		number << ntohs(addr.sin_port);
 		_port = number.str();
 	}
+	_timeUpdated = std::time(NULL);
 }
 
 Request::~Request()
@@ -112,6 +115,7 @@ Request &Request::operator=(Request const &rhs)
 	_address = rhs._address;
 	_port = rhs._port;
 	_maxBodySize = rhs._maxBodySize;
+	_timeUpdated = rhs._timeUpdated;
 	return *this;
 }
 
@@ -214,6 +218,11 @@ string Request::getLocationKey() const
 	return _locationKey;
 }
 
+std::time_t Request::getTime() const
+{
+	return _timeUpdated;
+}
+
 void Request::reset()
 {
 	_phase = PHASE_EMPTY;
@@ -224,6 +233,7 @@ void Request::reset()
 	_locationKey = string();
 	_serverIndex = 0;
 	_maxBodySize = 0;
+	_timeUpdated = std::time(NULL);
 }
 
 // --- Private --- //
