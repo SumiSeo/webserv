@@ -412,7 +412,7 @@ Request::e_statusFunction Request::verifyRequest()
 		if (!locationBlock.checkValuesOf("allow_methods", _startLine.method))
 		{
 			_phase = PHASE_ERROR;
-			_statusCode = METHOD_NOT_ALLOWED;
+			_statusCode = NOT_ALLOWED;
 			return STATUS_FUNCTION_SHOULD_RETURN;
 		}
 	}
@@ -421,7 +421,7 @@ Request::e_statusFunction Request::verifyRequest()
 		if (!server.checkValuesOf("allow_methods", _startLine.method))
 		{
 			_phase = PHASE_ERROR;
-			_statusCode = METHOD_NOT_ALLOWED;
+			_statusCode = NOT_ALLOWED;
 			return STATUS_FUNCTION_SHOULD_RETURN;
 		}
 	}

@@ -86,7 +86,7 @@ Response::Response(Request const &request, Server const &configs):
 	if(isCGI())
 	{
 		if (!handleCGI(request))
-			createBuffer(500, "Not implemented");
+			createBuffer(INTERNAL_SERVER_ERROR, "Internal Server Error");
 	}
 	else
 	{
@@ -105,20 +105,20 @@ Response::Response(Request const &request, Server const &configs):
 				{
 					string autoIndex = getValueOf("autoindex");
 					if (autoIndex.empty() || autoIndex != "on")
-						createBuffer(403, "Forbidden");
+						createBuffer(FORBIDDEN, "Forbidden");
 					else
 					{
 						string responseLine;
 						string responseBody = listDirectory(request);
 						if (!responseBody.empty())
 						{
-							responseLine = createStartLine(200, "Ok");
+							responseLine = createStartLine(OK, "Ok");
 							_absolutePath = ".html";
 							string responseHeaders = getDefaultHeaders(responseBody.size());
 							_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
 						}
 						else
-							createBuffer(403, "Forbidden");
+							createBuffer(FORBIDDEN, "Forbidden");
 					}
 					return;
 				}
@@ -141,7 +141,7 @@ Response::Response(Request const &request, Server const &configs):
 			else
 			{
 				std::cout<< "POST failed: " << _locationBlock.getValueOf("upload_path")<<std::endl;
-				createBuffer(405, "Not Allowed");
+				createBuffer(NOT_ALLOWED, "Not Allowed");
 			}
 		}
 		else if (method == "DELETE")
@@ -149,7 +149,7 @@ Response::Response(Request const &request, Server const &configs):
 			if (!_locationBlock.getValueOf("upload_path").empty())
 				handleDelete(request);
 			else
-				createBuffer(405, "Not Allowed");
+				createBuffer(NOT_ALLOWED, "Not Allowed");
 		}
 	}
 }
@@ -265,7 +265,7 @@ std::string Response::createResponseLine(Request const &request, std::string con
 	if(phase == Request::PHASE_COMPLETE)
 		_responseLine.statusCode = "200";
 	else if(phase == Request::PHASE_ERROR)
-		_responseLine.statusCode = "404";
+		_responseLine.statusCode = "400";
 	_responseLine.reasonPhrase = reason;
 	_responseLine.httpVersion = "HTTP/1.1";
 
