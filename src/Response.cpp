@@ -168,14 +168,17 @@ void Response::createBuffer(int statusCode, string const &reason)
 {
 	string responseLine = createStartLine(statusCode, reason);
 	string errorPath = _serverBlock.getErrorPage(statusCode);
-	std::cout << "eror path : "  << errorPath<<std::endl;
-	std::cout << "status code : "  << statusCode<<std::endl;
 	string responseBody;
 	if (errorPath.empty())
+	{
+		_absolutePath = ".txt";
 		responseBody = reason;
+	}
 	else
+	{
+		_absolutePath = ".html";
 		responseBody = getFileContent(errorPath);
-	_absolutePath = ".txt";
+	}
 	int responseBodySize = responseBody.size();
 	string responseHeaders = getDefaultHeaders(responseBodySize);
 	_buffer = responseLine + "\r\n" + responseHeaders + "\r\n" + responseBody;
