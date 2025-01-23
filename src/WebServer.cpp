@@ -161,7 +161,7 @@ void WebServer::searchTokens(t_vecStrings const &tokens)
 			parseTokens(it + 1, tokens.end());
 		}
 	}
-	printKeyValues();
+	//printKeyValues();
 }
 
 bool WebServer::isValidConfig() const

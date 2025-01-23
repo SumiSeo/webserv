@@ -125,12 +125,12 @@ Response::Response(Request const &request, Server const &configs):
 				string responseBody = getFileContent(_absolutePath);
 				int responseBodySize = responseBody.size();
 				string responseHeaders = responseLine.append(getDefaultHeaders(responseBodySize));
-				std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
-				std::cout << "HEADERS " << responseHeaders <<std::endl; 
+				//std::cout << "ABSOLUTE PATH"  << _absolutePath<< std::endl;
+				//std::cout << "HEADERS " << responseHeaders <<std::endl; 
 				string responseHeadersLine = responseHeaders + "\r\n";
 				_buffer = responseHeadersLine.append(responseBody);
-				std::cout << "fd check" << request.getFd()<<std::endl;
-				std::cout<<"buffer :" << _buffer <<std::endl;
+				//std::cout << "fd check" << request.getFd()<<std::endl;
+				//std::cout<<"buffer :" << _buffer <<std::endl;
 			}
 		}
 		else if (method == "POST")
@@ -139,7 +139,7 @@ Response::Response(Request const &request, Server const &configs):
 				handleUpload(request);
 			else
 			{
-				std::cout<< "POST failed: " << _locationBlock.getValueOf("upload_path")<<std::endl;
+				//std::cout<< "POST failed: " << _locationBlock.getValueOf("upload_path")<<std::endl;
 				createBuffer(NOT_ALLOWED, "Not Allowed");
 			}
 		}
@@ -408,7 +408,7 @@ endCGI:
 
 bool Response::isError(Request const &request)
 {
-	std::cout << "status code : " << request.getStatusCode()<<std::endl;
+	//std::cout << "status code : " << request.getStatusCode()<<std::endl;
 	if (request.getPhase() == Request::PHASE_ERROR)
 		return true;
 
