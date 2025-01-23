@@ -23,7 +23,8 @@ Server::Server()
 
 Server::Server(Server const &src):
 	_configs(src._configs),
-	_locations(src._locations)
+	_locations(src._locations),
+	_errorPages(src._errorPages)
 {
 }
 
@@ -35,6 +36,7 @@ Server &Server::operator=(Server const &rhs)
 {
 	_configs = rhs._configs;
 	_locations = rhs._locations;
+	_errorPages = rhs._errorPages;
 	return *this;
 }
 
