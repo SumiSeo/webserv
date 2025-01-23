@@ -665,6 +665,7 @@ void Response::handleUpload(Request const &request)
 			fileName += numToString(num);
 			string pathName = path + fileName;
 			ofstream fileOutput(pathName.c_str());
+			fileOutput.exceptions(std::ofstream::failbit);
 			fileOutput << request.getBody();
 			string startLine = createStartLine(201, "Created");
 			_absolutePath = ".txt";
