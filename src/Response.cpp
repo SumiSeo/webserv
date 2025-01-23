@@ -528,9 +528,10 @@ int Response::setAbsolutePathname()
 	string root = getValueOf("root");
 	if (root.empty())
 		return 1;
-	_absolutePath += root + _requestFile.substr(_locationKey.size() - 1);
-	if (_absolutePath[_absolutePath.size() - 1] == '/')
-		_absolutePath += getValueOf("index");
+	_absolutePath += root + _requestFile.substr(_requestFile.rfind('/') + 1);
+	string index = getValueOf("index");
+	if (!index.empty())
+		_absolutePath += "/" + index;
 	return 0;
 }
 

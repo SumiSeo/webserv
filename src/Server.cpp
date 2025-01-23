@@ -62,10 +62,11 @@ string Server::getValueOf(string const &target) const
 	return values[0];
 }
 
-string Server::searchLocationKey(string const &requestTarget) const
+string Server::searchLocationKey(string requestTarget) const
 {
 	typedef map<string, Location> t_mapStringLocs;
 
+	requestTarget = requestTarget.substr(0, requestTarget.find('?'));
 	t_mapStringLocs::const_iterator locationBlock;
 	std::size_t lenMax = 0;
 

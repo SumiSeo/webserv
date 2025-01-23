@@ -26,7 +26,7 @@ struct Server
 
 	t_vecStrings getValuesOf(std::string const &target) const;
 	std::string getValueOf(std::string const &target) const;
-	std::string searchLocationKey(std::string const &requestTarget) const;
+	std::string searchLocationKey(std::string requestTarget) const;
 	bool checkValuesOf(std::string const &target, std::string const &testValue) const;
 	bool checkValueOf(std::string const &target, std::string const &testValue) const;
 	std::string getErrorPage(std::string const &errorCode);
