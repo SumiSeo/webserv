@@ -30,7 +30,7 @@ namespace
 {
 	std::size_t const MAX_BUFFER_LEN = 8192;
 	template<typename T> string numToString(T number);
-	bool isValidPathToDelete(string const &path);
+	bool isValidPath(string const &path);
 	t_vecStrings split(string const &str, char sep);
 }
 
@@ -97,11 +97,7 @@ Response::Response(Request const &request, Server const &configs):
 		if (method == "GET")
 		{
 			if (access(_absolutePath.c_str(), F_OK | R_OK) == -1)
-			{
-				
 				createBuffer(NOT_FOUND, "Not Found");
-
-			}
 			else
 			{
 				if (Utils::isDirectory(_absolutePath.c_str()))
@@ -695,7 +691,7 @@ void Response::handleDelete(Request const &request)
 	string path = _locationBlock.getValueOf("upload_path");
 	string fileName = request.getStartLine().requestTarget.substr(_locationKey.size() - 1);
 	string pathName = path + fileName;
-	if (isValidPathToDelete(pathName))
+	if (isValidPath(pathName))
 	{
 		if (unlink(pathName.c_str()) == -1)
 			std::perror("unlink");
@@ -708,6 +704,9 @@ void Response::handleDelete(Request const &request)
 
 string Response::listDirectory(Request const &request)
 {
+	if (!isValidPath(_absolutePath))
+		return string();
+
 	DIR *directory = opendir(_absolutePath.c_str());
 	if (directory == NULL)
 		return string();
@@ -725,10 +724,6 @@ string Response::listDirectory(Request const &request)
 	while ((dp = readdir(directory)) != NULL)
 	{
 		char *fileName = dp->d_name;
-		if (std::strncmp(fileName, ".", 2) == 0)
-			continue;
-		if (std::strncmp(fileName, "..", 3) == 0)
-			continue;
 		string pathName = fileName;
 		if (dp->d_type == DT_DIR)
 			pathName += '/';
@@ -762,7 +757,7 @@ namespace
 		ss << number;
 		return ss.str();
 	}
-	bool isValidPathToDelete(string const &path)
+	bool isValidPath(string const &path)
 	{
 		t_vecStrings components = split(path, '/');
 		for (t_vecStrings::const_iterator it = components.begin(); it != components.end(); ++it)
