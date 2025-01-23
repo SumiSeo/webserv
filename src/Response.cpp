@@ -67,9 +67,9 @@ Response::Response(Response const &src):
 
 Response::Response(Request const &request, Server const &configs):
 	_cgiFd(-1),
-	_serverBlock(configs),
-	_timeUpdated(std::time(NULL))
+	_serverBlock(configs)
 {
+	_timeUpdated = std::time(NULL);
 	initContentType();
 	if(isError(request))
 	{
@@ -203,6 +203,7 @@ Response &Response::operator=(Response const &rhs)
 	_requestFile = rhs._requestFile;
 	_requestQuery = rhs._requestQuery;
 	_absolutePath = rhs._absolutePath;
+	_timeUpdated = rhs._timeUpdated;
 	return *this;
 }
 
@@ -536,10 +537,14 @@ int Response::setAbsolutePathname()
 	string root = getValueOf("root");
 	if (root.empty())
 		return 1;
-	_absolutePath += root + _requestFile.substr(_requestFile.rfind('/') + 1);
+	char const &lastChar = _locationKey[_locationKey.size() - 1];
+	if (lastChar == '/')
+		_absolutePath += root + _requestFile.substr(_locationKey.size());
+	else
+		_absolutePath += root + _requestFile.substr(_requestFile.rfind('/') + 1);
 	string index = getValueOf("index");
-	if (!index.empty())
-		_absolutePath += "/" + index;
+	if (!index.empty() && _requestFile[_requestFile.size() - 1] == '/')
+		_absolutePath += index;
 	return 0;
 }
 

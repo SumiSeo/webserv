@@ -88,6 +88,10 @@ WebServer::~WebServer()
 		close(_epollFd);
 	for (map<int, Request>::const_iterator it = _requests.begin(); it != _requests.end(); ++it)
 		close(it->first);
+	for (map<int, Response>::const_iterator it = _responses.begin(); it != _responses.end(); ++it)
+		close(it->first);
+	for (map<int, int>::const_iterator it = _cgiFdToResponseFd.begin(); it != _cgiFdToResponseFd.end(); ++it)
+		close(it->first);
 }
 
 SignalHandler::SignalHandler(int sigNum, t_sigHandler handler):
@@ -533,10 +537,12 @@ void WebServer::loop()
 			std::time_t actualTime = std::time(NULL);
 			if (actualTime - it->second.getTime() > TIMEOUT_SECONDS)
 			{
-				int cgiFd = _responses[fd].getFdCGI();
-				_responses.erase(fd);
-				close(cgiFd);
-				_cgiFdToResponseFd.erase(cgiFd);
+				if (_responses.find(fd) != _responses.end())
+				{
+					int cgiFd = _responses[fd].getFdCGI();
+					_cgiFdToResponseFd.erase(cgiFd);
+					close(cgiFd);
+				}
 				toRemove.push_back(fd);
 			}
 		}
