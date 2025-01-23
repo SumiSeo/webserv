@@ -94,7 +94,11 @@ Response::Response(Request const &request, Server const &configs):
 		if (method == "GET")
 		{
 			if (access(_absolutePath.c_str(), F_OK | R_OK) == -1)
+			{
+				
 				createBuffer(NOT_FOUND, "Not Found");
+
+			}
 			else
 			{
 				if (Utils::isDirectory(_absolutePath.c_str()))
@@ -164,6 +168,8 @@ void Response::createBuffer(int statusCode, string const &reason)
 {
 	string responseLine = createStartLine(statusCode, reason);
 	string errorPath = _serverBlock.getErrorPage(statusCode);
+	std::cout << "eror path : "  << errorPath<<std::endl;
+	std::cout << "status code : "  << statusCode<<std::endl;
 	string responseBody;
 	if (errorPath.empty())
 		responseBody = reason;
